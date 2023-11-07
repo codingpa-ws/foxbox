@@ -29,7 +29,8 @@ While interop is really cool, I’m not planning to make foxbox compataible
 with
 
 - [x] Create and delete foxboxes from rootfs tarballs
-- [ ] List all foxboxes and running foxes
+- [x] List all foxboxes
+- [ ] List running foxes
 - [ ] Pull images
 - [ ] Enter foxboxes by with [nsenter][nsenter]
 - Isolation
