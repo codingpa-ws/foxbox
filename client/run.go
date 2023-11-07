@@ -1,0 +1,250 @@
+package client
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"syscall"
+
+	"github.com/codingpa-ws/foxbox/internal/store"
+
+	seccomp "github.com/seccomp/libseccomp-golang"
+	"golang.org/x/sys/unix"
+)
+
+type RunOptions struct {
+	Command []string
+	Store   *store.Store
+}
+
+func init() {
+	if _, ok := os.LookupEnv("FOXBOX_EXEC"); ok {
+		child()
+		return
+	}
+}
+
+func (self *RunOptions) notnil() *RunOptions {
+	if self != nil {
+		return self
+	}
+	return &RunOptions{}
+}
+
+func Run(name string, opt *RunOptions) (err error) {
+	opt = opt.notnil()
+
+	if opt.Store == nil {
+		opt.Store, err = store.New("runtime")
+		if err != nil {
+			return
+		}
+	}
+
+	entry, err := opt.Store.GetEntry(name)
+	if err != nil {
+		return
+	}
+
+	run(name, entry.FileSystem(), opt.Command)
+
+	return
+}
+
+func run(name string, dir string, command []string) {
+	cmd := exec.Command("/proc/self/exe", command...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Dir = dir
+	cmd.Env = []string{"FOXBOX_EXEC=" + name}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME,
+		Unshareflags: syscall.CLONE_NEWNS,
+		UidMappings: []syscall.SysProcIDMap{{
+			ContainerID: 0,
+			HostID:      1000,
+			Size:        1}},
+	}
+	err := cmd.Run()
+	if cmd.ProcessState == nil {
+		must(err)
+	}
+	exit := cmd.ProcessState.ExitCode()
+	if exit != 0 {
+		os.Exit(exit)
+	}
+}
+func child() {
+	prepareFs()
+	name := os.Getenv("FOXBOX_EXEC")
+	must(syscall.Sethostname([]byte(name)))
+	dropCapabilities()
+	dropSyscalls()
+	args := []string{"sh"}
+	if len(os.Args) > 1 {
+		args = os.Args[1:]
+	}
+
+	err := syscall.Exec("/bin/sh", args, []string{"PATH=/bin:/sbin:/usr/bin:/usr/sbin", "LANG=C.UTF-8", "CHARSET=UTF-8"})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	must(syscall.Unmount("proc", 0))
+}
+
+func prepareFs() {
+	must(syscall.Chroot("."))
+	must(os.Chdir("/"))
+	must(syscall.Mount("proc", "proc", "proc", 0, ""))
+}
+
+func dropSyscalls() {
+	var SCMP_FAIL = seccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
+	filter, err := seccomp.NewFilter(seccomp.ActAllow)
+	must(err)
+	defer filter.Release()
+
+	chmod, err := seccomp.GetSyscallFromName("chmod")
+	must(err)
+	must(filter.AddRuleConditional(chmod, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 1,
+			Operand1: syscall.S_ISUID,
+			Operand2: syscall.S_ISUID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	must(filter.AddRuleConditional(chmod, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 1,
+			Operand1: syscall.S_ISGID,
+			Operand2: syscall.S_ISGID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	fchmod, err := seccomp.GetSyscallFromName("fchmod")
+	must(err)
+	must(filter.AddRuleConditional(fchmod, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 1,
+			Operand1: syscall.S_ISUID,
+			Operand2: syscall.S_ISUID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	must(filter.AddRuleConditional(fchmod, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 1,
+			Operand1: syscall.S_ISGID,
+			Operand2: syscall.S_ISGID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	fchmodat, err := seccomp.GetSyscallFromName("fchmodat")
+	must(err)
+	must(filter.AddRuleConditional(fchmodat, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 2,
+			Operand1: syscall.S_ISUID,
+			Operand2: syscall.S_ISUID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	must(filter.AddRuleConditional(fchmodat, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 2,
+			Operand1: syscall.S_ISGID,
+			Operand2: syscall.S_ISGID,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	unshare, err := seccomp.GetSyscallFromName("unshare")
+	must(err)
+	must(filter.AddRuleConditional(unshare, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 0,
+			Operand1: syscall.CLONE_NEWUSER,
+			Operand2: syscall.CLONE_NEWUSER,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	clone, err := seccomp.GetSyscallFromName("clone")
+	must(err)
+	must(filter.AddRuleConditional(clone, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 0,
+			Operand1: syscall.CLONE_NEWUSER,
+			Operand2: syscall.CLONE_NEWUSER,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	ioctl, err := seccomp.GetSyscallFromName("ioctl")
+	must(err)
+	must(filter.AddRuleConditional(ioctl, SCMP_FAIL, []seccomp.ScmpCondition{
+		{
+			Argument: 0,
+			Operand1: syscall.CLONE_NEWUSER,
+			Operand2: syscall.CLONE_NEWUSER,
+			Op:       seccomp.CompareMaskedEqual,
+		},
+	}))
+	must(filter.SetNoNewPrivsBit(false))
+
+	forbiddenCalls := []string{
+		"keyctl",
+		"add_key",
+		"request_key",
+		"ptrace",
+		"mbind",
+		"migrate_pages",
+		"move_pages",
+		"set_mempolicy",
+		"userfaultfd",
+		"perf_event_open",
+	}
+
+	for _, name := range forbiddenCalls {
+		name, err := seccomp.GetSyscallFromName(name)
+		must(err)
+		must(filter.AddRule(name, SCMP_FAIL))
+	}
+
+	must(filter.Load())
+}
+
+func dropCapabilities() {
+	caps := []uintptr{
+		unix.CAP_AUDIT_CONTROL,
+		unix.CAP_AUDIT_READ,
+		unix.CAP_AUDIT_WRITE,
+		unix.CAP_BLOCK_SUSPEND,
+		unix.CAP_DAC_READ_SEARCH,
+		unix.CAP_FSETID,
+		unix.CAP_IPC_LOCK,
+		unix.CAP_MAC_ADMIN,
+		unix.CAP_MAC_OVERRIDE,
+		unix.CAP_MKNOD,
+		unix.CAP_SETFCAP,
+		unix.CAP_SYSLOG,
+		unix.CAP_SYS_ADMIN,
+		unix.CAP_SYS_BOOT,
+		unix.CAP_SYS_MODULE,
+		unix.CAP_SYS_NICE,
+		unix.CAP_SYS_RAWIO,
+		unix.CAP_SYS_RESOURCE,
+		unix.CAP_SYS_TIME,
+		unix.CAP_WAKE_ALARM,
+	}
+
+	for _, cap := range caps {
+		must(unix.Prctl(unix.PR_CAPBSET_DROP, cap, 0, 0, 0))
+	}
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
