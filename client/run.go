@@ -30,7 +30,7 @@ func init() {
 }
 
 func Run(name string, opt *RunOptions) (err error) {
-	opt = notnil(opt)
+	opt = newOr(opt)
 
 	if opt.Store == nil {
 		opt.Store, err = store.New("runtime")

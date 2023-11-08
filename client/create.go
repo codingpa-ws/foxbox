@@ -21,7 +21,7 @@ func (self *CreateOptions) GetImage() (io.ReadCloser, error) {
 }
 
 func Create(opt *CreateOptions) (name string, err error) {
-	opt = notnil(opt)
+	opt = newOr(opt)
 	name = NewName()
 
 	if opt.Store == nil {

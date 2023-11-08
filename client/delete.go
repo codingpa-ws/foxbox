@@ -7,7 +7,7 @@ type DeleteOptions struct {
 }
 
 func Delete(name string, opt *DeleteOptions) (err error) {
-	opt = notnil(opt)
+	opt = newOr(opt)
 
 	if opt.Store == nil {
 		opt.Store, err = store.New("runtime")
