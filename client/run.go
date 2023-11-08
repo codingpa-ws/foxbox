@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,7 +20,11 @@ type RunOptions struct {
 
 func init() {
 	if _, ok := os.LookupEnv("FOXBOX_EXEC"); ok {
-		child()
+		err := child()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		return
 	}
 }
@@ -46,12 +51,12 @@ func Run(name string, opt *RunOptions) (err error) {
 		return
 	}
 
-	run(name, entry.FileSystem(), opt.Command)
+	err = run(name, entry.FileSystem(), opt.Command)
 
 	return
 }
 
-func run(name string, dir string, command []string) {
+func run(name string, dir string, command []string) error {
 	cmd := exec.Command("/proc/self/exe", command...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -68,129 +73,200 @@ func run(name string, dir string, command []string) {
 	}
 	err := cmd.Run()
 	if cmd.ProcessState == nil {
-		must(err)
+		return err
 	}
 	exit := cmd.ProcessState.ExitCode()
 	if exit != 0 {
 		os.Exit(exit)
 	}
+	return nil
 }
-func child() {
-	prepareFs()
+func child() (err error) {
+	err = prepareFs()
+	if err != nil {
+		return err
+	}
 	name := os.Getenv("FOXBOX_EXEC")
-	must(syscall.Sethostname([]byte(name)))
-	dropCapabilities()
-	dropSyscalls()
+	err = syscall.Sethostname([]byte(name))
+	if err != nil {
+		return fmt.Errorf("setting hostname to %s: %w", name, err)
+	}
+	err = dropCapabilities()
+	if err != nil {
+		return fmt.Errorf("dropping capabilities: %w", err)
+	}
+	err = dropSyscalls()
+	if err != nil {
+		return fmt.Errorf("dropping syscall permissions: %w", err)
+	}
 	args := []string{"sh"}
 	if len(os.Args) > 1 {
 		args = os.Args[1:]
 	}
 
-	err := syscall.Exec("/bin/sh", args, []string{"PATH=/bin:/sbin:/usr/bin:/usr/sbin", "LANG=C.UTF-8", "CHARSET=UTF-8"})
+	defer syscall.Unmount("proc", 0)
+	err = syscall.Exec("/bin/sh", args, []string{"PATH=/bin:/sbin:/usr/bin:/usr/sbin", "LANG=C.UTF-8", "CHARSET=UTF-8"})
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
-	must(syscall.Unmount("proc", 0))
+	fmt.Println("ENDED")
+	return nil
 }
 
-func prepareFs() {
-	must(syscall.Chroot("."))
-	must(os.Chdir("/"))
-	must(syscall.Mount("proc", "proc", "proc", 0, ""))
+func prepareFs() (err error) {
+	return errors.Join(
+		syscall.Chroot("."),
+		os.Chdir("/"),
+		syscall.Mount("proc", "proc", "proc", 0, ""),
+	)
 }
 
-func dropSyscalls() {
+func dropSyscalls() error {
 	var SCMP_FAIL = seccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
 	filter, err := seccomp.NewFilter(seccomp.ActAllow)
-	must(err)
+	if err != nil {
+		return fmt.Errorf("creating seccomp filter: %w", err)
+	}
 	defer filter.Release()
 
-	chmod, err := seccomp.GetSyscallFromName("chmod")
-	must(err)
-	must(filter.AddRuleConditional(chmod, SCMP_FAIL, []seccomp.ScmpCondition{
+	name := "chmod"
+	call, err := seccomp.GetSyscallFromName(name)
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 1,
 			Operand1: syscall.S_ISUID,
 			Operand2: syscall.S_ISUID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	must(filter.AddRuleConditional(chmod, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 1,
 			Operand1: syscall.S_ISGID,
 			Operand2: syscall.S_ISGID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	fchmod, err := seccomp.GetSyscallFromName("fchmod")
-	must(err)
-	must(filter.AddRuleConditional(fchmod, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+	name = "fchmod"
+	call, err = seccomp.GetSyscallFromName(name)
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 1,
 			Operand1: syscall.S_ISUID,
 			Operand2: syscall.S_ISUID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	must(filter.AddRuleConditional(fchmod, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 1,
 			Operand1: syscall.S_ISGID,
 			Operand2: syscall.S_ISGID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	fchmodat, err := seccomp.GetSyscallFromName("fchmodat")
-	must(err)
-	must(filter.AddRuleConditional(fchmodat, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+
+	name = "fchmodat"
+	call, err = seccomp.GetSyscallFromName(name)
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 2,
 			Operand1: syscall.S_ISUID,
 			Operand2: syscall.S_ISUID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	must(filter.AddRuleConditional(fchmodat, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 2,
 			Operand1: syscall.S_ISGID,
 			Operand2: syscall.S_ISGID,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	unshare, err := seccomp.GetSyscallFromName("unshare")
-	must(err)
-	must(filter.AddRuleConditional(unshare, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+
+	name = "unshare"
+	call, err = seccomp.GetSyscallFromName("unshare")
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 0,
 			Operand1: syscall.CLONE_NEWUSER,
 			Operand2: syscall.CLONE_NEWUSER,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	clone, err := seccomp.GetSyscallFromName("clone")
-	must(err)
-	must(filter.AddRuleConditional(clone, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+
+	name = "clone"
+	call, err = seccomp.GetSyscallFromName(name)
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 0,
 			Operand1: syscall.CLONE_NEWUSER,
 			Operand2: syscall.CLONE_NEWUSER,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	ioctl, err := seccomp.GetSyscallFromName("ioctl")
-	must(err)
-	must(filter.AddRuleConditional(ioctl, SCMP_FAIL, []seccomp.ScmpCondition{
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+
+	name = "ioctl"
+	call, err = seccomp.GetSyscallFromName(name)
+	if err != nil {
+		return fmt.Errorf("getting syscall `%s`: %w", name, err)
+	}
+	err = filter.AddRuleConditional(call, SCMP_FAIL, []seccomp.ScmpCondition{
 		{
 			Argument: 0,
 			Operand1: syscall.CLONE_NEWUSER,
 			Operand2: syscall.CLONE_NEWUSER,
 			Op:       seccomp.CompareMaskedEqual,
 		},
-	}))
-	must(filter.SetNoNewPrivsBit(false))
+	})
+	if err != nil {
+		return fmt.Errorf("adding rule for %s: %w", name, err)
+	}
+
+	err = filter.SetNoNewPrivsBit(false)
+	if err != nil {
+		return fmt.Errorf("setting SCMP_FLTATR_CTL_NNP: %w", err)
+	}
 
 	forbiddenCalls := []string{
 		"keyctl",
@@ -206,15 +282,22 @@ func dropSyscalls() {
 	}
 
 	for _, name := range forbiddenCalls {
-		name, err := seccomp.GetSyscallFromName(name)
-		must(err)
-		must(filter.AddRule(name, SCMP_FAIL))
+		call, err := seccomp.GetSyscallFromName(name)
+
+		if err != nil {
+			return fmt.Errorf("getting syscall `%s`: %w", name, err)
+		}
+		err = filter.AddRule(call, SCMP_FAIL)
+
+		if err != nil {
+			return fmt.Errorf("adding rule for `%s`: %w", name, err)
+		}
 	}
 
-	must(filter.Load())
+	return filter.Load()
 }
 
-func dropCapabilities() {
+func dropCapabilities() error {
 	caps := []uintptr{
 		unix.CAP_AUDIT_CONTROL,
 		unix.CAP_AUDIT_READ,
@@ -239,12 +322,12 @@ func dropCapabilities() {
 	}
 
 	for _, cap := range caps {
-		must(unix.Prctl(unix.PR_CAPBSET_DROP, cap, 0, 0, 0))
-	}
-}
+		err := unix.Prctl(unix.PR_CAPBSET_DROP, cap, 0, 0, 0)
 
-func must(err error) {
-	if err != nil {
-		panic(err)
+		if err != nil {
+			return fmt.Errorf("dropping capability %#x: %w", cap, err)
+		}
 	}
+
+	return nil
 }
