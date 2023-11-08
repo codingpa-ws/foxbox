@@ -39,8 +39,9 @@ with
   - [x] User namespaces
   - [x] Dropping kernel capabilities
   - [x] Syscall restriction with seccomp
+  - [x] Standard streams (stdin, stdout, stderr)
+  - [ ] `/dev/{null,zero,urandom,random,tty}` access
   - [ ] Cgroups v2
-  - [ ] `/dev/random` access
 - Networking
   - [ ] Host networking
   - [ ] slirp4netns

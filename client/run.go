@@ -84,6 +84,10 @@ func child() (err error) {
 	if err != nil {
 		return fmt.Errorf("setting hostname to %s: %w", name, err)
 	}
+	err = linkStandardStreams()
+	if err != nil {
+		return
+	}
 	err = dropCapabilities()
 	if err != nil {
 		return fmt.Errorf("dropping capabilities: %w", err)
@@ -323,4 +327,24 @@ func dropCapabilities() error {
 	}
 
 	return nil
+}
+
+func linkStandardStreams() (err error) {
+	err = syscall.Symlink("/proc/self/fd/0", "/dev/stdin")
+	if err != nil {
+		return fmt.Errorf("linking /dev/stdin: %w", err)
+	}
+	err = syscall.Symlink("/proc/self/fd/1", "/dev/stdout")
+	if err != nil {
+		return fmt.Errorf("linking /dev/stdout: %w", err)
+	}
+	err = syscall.Symlink("/proc/self/fd/2", "/dev/stderr")
+	if err != nil {
+		return fmt.Errorf("linking /dev/stderr: %w", err)
+	}
+	err = syscall.Symlink("/proc/self/fd", "/dev/fd")
+	if err != nil {
+		return fmt.Errorf("linking /dev/stderr: %w", err)
+	}
+	return
 }
