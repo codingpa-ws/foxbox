@@ -40,7 +40,7 @@ with
   - [x] Dropping kernel capabilities
   - [x] Syscall restriction with seccomp
   - [x] Standard streams (stdin, stdout, stderr)
-  - [ ] `/dev/{null,zero,urandom,random,tty}` access
+  - [x] `/dev/{null,zero,urandom,random,tty}` access
   - [ ] Cgroups v2
 - Networking
   - [ ] Host networking

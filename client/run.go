@@ -75,11 +75,11 @@ func run(name string, dir string, command []string) error {
 	return nil
 }
 func child() (err error) {
-	err = prepareFs()
+	name := os.Getenv("FOXBOX_EXEC")
+	err = prepareFs(name)
 	if err != nil {
 		return err
 	}
-	name := os.Getenv("FOXBOX_EXEC")
 	err = syscall.Sethostname([]byte(name))
 	if err != nil {
 		return fmt.Errorf("setting hostname to %s: %w", name, err)
@@ -106,11 +106,34 @@ func child() (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println("ENDED")
 	return nil
 }
 
-func prepareFs() (err error) {
+func prepareFs(name string) (err error) {
+	devices := []string{
+		"/dev/null",
+		"/dev/zero",
+		"/dev/full",
+		"/dev/tty",
+		"/dev/random",
+		"/dev/urandom",
+	}
+
+	for _, device := range devices {
+		err = os.WriteFile("."+device, []byte{}, 0666)
+		if err != nil {
+			return fmt.Errorf("creating %s: %w", device, err)
+		}
+		err = unix.Mount(device, "."+device, "", unix.MS_BIND|unix.MS_REC, "")
+		if err != nil {
+			return fmt.Errorf("mounting %s: %w", device, err)
+		}
+	}
+
+	return enterFs()
+}
+
+func enterFs() (err error) {
 	return errors.Join(
 		syscall.Chroot("."),
 		os.Chdir("/"),
