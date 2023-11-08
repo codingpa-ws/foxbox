@@ -33,6 +33,8 @@ with
 - [ ] List running foxes
 - [ ] Pull images
 - [ ] Enter foxboxes by with [nsenter][nsenter]
+- [ ] Image management (pull, show, ls, rm)
+- [ ] Box inspect (analog to `podman inspect`)
 - Isolation
   - [x] User namespaces
   - [x] Dropping kernel capabilities
