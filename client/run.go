@@ -29,15 +29,8 @@ func init() {
 	}
 }
 
-func (self *RunOptions) notnil() *RunOptions {
-	if self != nil {
-		return self
-	}
-	return &RunOptions{}
-}
-
 func Run(name string, opt *RunOptions) (err error) {
-	opt = opt.notnil()
+	opt = notnil(opt)
 
 	if opt.Store == nil {
 		opt.Store, err = store.New("runtime")
