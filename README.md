@@ -23,6 +23,29 @@ wouldn’t run this there (yet, hehe).
 Purely for fun, containers are named _foxboxes_ (or _boxes_ for short).
 Likewise, tasks in containers are just called _foxes_.
 
+## Usage
+
+For now, clone the repo and then run `go run ./cmd/foxbox` to access the
+cli tool.
+
+To run a foxbox, you need a compatible image. So far, I’ve only used the
+[alpine 3.18.4 rootfs][alpine]. Download that rootfs to `./images` and
+ungzip (not untar!) it. The resulting file name excluding `.tar`, e.g.
+`alpine-minirootfs-3.18.4-x86_64` is the image name in foxbox.
+
+To create a foxbox and run a shell, execute the following in the project
+root:
+
+```sh
+go run ./cmd/foxbox run --rm alpine-3.18.4-x86_64
+```
+
+Run the `hostname` to get the box name. To find the rootfs, head to
+`./runtime/BOXNAME/boxfs` on the host machine, where `BOXNAME` is the
+hostname of the box.
+
+[alpine]: https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.4-x86_64.tar.gz
+
 ## Features
 
 While interop is really cool, I’m not planning to make foxbox compataible
