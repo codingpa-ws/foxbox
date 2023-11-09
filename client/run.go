@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -95,6 +96,9 @@ func run(name string, dir string, opt *RunOptions) error {
 	}
 	exit := cmd.ProcessState.ExitCode()
 	if exit != 0 {
+		if flag.Lookup("test.v") != nil {
+			return fmt.Errorf("exited with code %d", exit)
+		}
 		os.Exit(exit)
 	}
 	return nil
@@ -378,6 +382,14 @@ func dropCapabilities() error {
 }
 
 func linkStandardStreams() (err error) {
+	// Removing can be silent because we’ll fail
+	// with EPERM etc. in symlink below anyway
+	// TODO: move this to client.Create() perhaps?
+	_ = os.Remove("/dev/stdin")
+	_ = os.Remove("/dev/stdout")
+	_ = os.Remove("/dev/stderr")
+	_ = os.Remove("/dev/fd")
+
 	err = syscall.Symlink("/proc/self/fd/0", "/dev/stdin")
 	if err != nil {
 		return fmt.Errorf("linking /dev/stdin: %w", err)
@@ -392,7 +404,7 @@ func linkStandardStreams() (err error) {
 	}
 	err = syscall.Symlink("/proc/self/fd", "/dev/fd")
 	if err != nil {
-		return fmt.Errorf("linking /dev/stderr: %w", err)
+		return fmt.Errorf("linking /dev/fd: %w", err)
 	}
 	return
 }
