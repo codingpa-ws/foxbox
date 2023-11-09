@@ -3,6 +3,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"syscall"
@@ -16,6 +17,30 @@ import (
 type RunOptions struct {
 	Command []string
 	Store   *store.Store
+
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
+func (self RunOptions) getStdin() io.Reader {
+	if self.Stdin == nil {
+		return os.Stdin
+	}
+	return self.Stdin
+}
+func (self RunOptions) getStdout() io.Writer {
+	if self.Stdout == nil {
+		return os.Stdout
+	}
+	return self.Stdout
+}
+
+func (self RunOptions) getStderr() io.Writer {
+	if self.Stderr == nil {
+		return os.Stderr
+	}
+	return self.Stderr
 }
 
 func init() {
@@ -44,16 +69,16 @@ func Run(name string, opt *RunOptions) (err error) {
 		return
 	}
 
-	err = run(name, entry.FileSystem(), opt.Command)
+	err = run(name, entry.FileSystem(), opt)
 
 	return
 }
 
-func run(name string, dir string, command []string) error {
-	cmd := exec.Command("/proc/self/exe", command...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+func run(name string, dir string, opt *RunOptions) error {
+	cmd := exec.Command("/proc/self/exe", opt.Command...)
+	cmd.Stdin = opt.getStdin()
+	cmd.Stdout = opt.getStdout()
+	cmd.Stderr = opt.getStderr()
 	cmd.Dir = dir
 	cmd.Env = []string{"FOXBOX_EXEC=" + name}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
