@@ -29,9 +29,10 @@ For now, clone the repo and then run `go run ./cmd/foxbox` to access the
 cli tool.
 
 To run a foxbox, you need a compatible image. So far, I’ve only used the
-[alpine 3.18.4 rootfs][alpine]. Download that rootfs to `./images` and
-ungzip (not untar!) it. The resulting file name excluding `.tar`, e.g.
-`alpine-minirootfs-3.18.4-x86_64` is the image name in foxbox.
+[alpine 3.18.4 rootfs][alpine]. Download that rootfs to `./images` The
+resulting file name excluding the file extention (must be `.tar` or
+`.tar.gz`), e.g. `alpine-minirootfs-3.18.4-x86_64` is the image name in
+foxbox.
 
 To create a foxbox and run a shell, execute the following in the project
 root:

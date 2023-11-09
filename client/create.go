@@ -2,6 +2,7 @@ package client
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,10 +15,16 @@ type CreateOptions struct {
 	Store *store.Store
 }
 
-func (self *CreateOptions) GetImage() (io.ReadCloser, error) {
+func (self *CreateOptions) GetImage() (f io.ReadCloser, gzipped bool, err error) {
 	path := filepath.Join("images", self.Image+".tar")
 
-	return os.Open(path)
+	f, err = os.Open(path)
+	if err != nil {
+		f, err = os.Open(path + ".gz")
+		gzipped = true
+	}
+
+	return
 }
 
 func Create(opt *CreateOptions) (name string, err error) {
@@ -36,15 +43,13 @@ func Create(opt *CreateOptions) (name string, err error) {
 		return
 	}
 
-	image, err := opt.GetImage()
+	image, gzipped, err := opt.GetImage()
 	if err != nil {
 		entry.Delete()
 		return
 	}
 
-	defer image.Close()
-
-	err = extractImage(image, entry.FileSystem())
+	err = extractImage(image, gzipped, entry.FileSystem())
 
 	if err != nil {
 		entry.Delete()
@@ -53,12 +58,15 @@ func Create(opt *CreateOptions) (name string, err error) {
 	return
 }
 
-func extractImage(image io.Reader, path string) error {
-	// gr, err := gzip.NewReader(image)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer gr.Close()
+func extractImage(image io.ReadCloser, ungzip bool, path string) error {
+	if ungzip {
+		var err error
+		image, err = gzip.NewReader(image)
+		if err != nil {
+			return err
+		}
+	}
+	defer image.Close()
 
 	tr := tar.NewReader(image)
 
