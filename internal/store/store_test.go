@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/codingpa-ws/foxbox/internal/store"
@@ -31,8 +32,8 @@ func scandir(t *testing.T, path string) (result []string) {
 	return
 }
 
-func assertEntries(t *testing.T, store *store.Store, expected []string) {
-	actual := scandir(t, store.Base())
+func assertDirContents(t *testing.T, dir string, expected []string) {
+	actual := scandir(t, dir)
 	if len(expected) == 0 {
 		require.Empty(t, actual)
 	} else {
@@ -44,18 +45,21 @@ func TestNew(t *testing.T) {
 	store, removeStore := mustStore(t)
 	defer removeStore()
 
-	assertEntries(t, store, []string{})
+	assertDirContents(t, store.Base(), []string{"entries", "images"})
+	assertDirContents(t, store.EntryBase(), []string{})
+
+	require.Truef(t, strings.HasSuffix(store.EntryBase(), "/entries"), "wanted suffix /entries, got %s", store.EntryBase())
 
 	entry, err := store.NewEntry("testbox")
 	require.NoError(t, err)
-	require.Equal(t, store.Base()+"/testbox", entry.Base())
+	require.Equal(t, store.EntryBase()+"/testbox", entry.Base())
 
-	assertEntries(t, store, []string{"testbox"})
+	assertDirContents(t, store.EntryBase(), []string{"testbox"})
 
 	require.Equal(t, entry.Base()+"/boxfs", entry.FileSystem())
 
 	err = entry.Delete()
 	require.NoError(t, err)
 
-	assertEntries(t, store, []string{})
+	assertDirContents(t, store.EntryBase(), []string{})
 }

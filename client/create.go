@@ -16,7 +16,7 @@ type CreateOptions struct {
 }
 
 func (self *CreateOptions) GetImage() (f io.ReadCloser, gzipped bool, err error) {
-	path := filepath.Join("images", self.Image+".tar")
+	path := self.Store.GetImagePath(self.Image, false)
 
 	f, err = os.Open(path)
 	if err != nil {

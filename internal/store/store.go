@@ -19,12 +19,20 @@ func (self Store) Base() string {
 	return self.base
 }
 
+func (self Store) EntryBase() string {
+	return filepath.Join(self.base, "entries")
+}
+
+func (self Store) ImageBase() string {
+	return filepath.Join(self.base, "images")
+}
+
 func (self Store) GetEntry(name string) (*StoreEntry, error) {
-	name = strings.ReplaceAll(name, "/", "")
+	name = sanitize(name)
 	if strings.TrimSpace(name) == "" {
 		return nil, errors.New("store: invalid foxbox name")
 	}
-	entry := &StoreEntry{filepath.Join(self.base, name)}
+	entry := &StoreEntry{filepath.Join(self.EntryBase(), name)}
 
 	_, err := os.Stat(entry.base)
 	if os.IsNotExist(err) || err != nil {
@@ -35,7 +43,7 @@ func (self Store) GetEntry(name string) (*StoreEntry, error) {
 }
 
 func (self Store) NewEntry(name string) (*StoreEntry, error) {
-	entry := &StoreEntry{filepath.Join(self.base, name)}
+	entry := &StoreEntry{filepath.Join(self.EntryBase(), sanitize(name))}
 
 	_, err := os.Stat(entry.base)
 	if os.IsExist(err) || !os.IsNotExist(err) {
@@ -45,10 +53,21 @@ func (self Store) NewEntry(name string) (*StoreEntry, error) {
 	return entry, entry.init()
 }
 
+func (self Store) GetImagePath(name string, gzip bool) string {
+	path := filepath.Join(self.ImageBase(), sanitize(name)) + ".tar"
+	if gzip {
+		path = path + ".gz"
+	}
+	return path
+}
+
 type StoreEntry struct{ base string }
 
 func (self Store) init() error {
-	return os.MkdirAll(self.base, 0755)
+	return errors.Join(
+		os.MkdirAll(self.EntryBase(), 0755),
+		os.MkdirAll(self.ImageBase(), 0755),
+	)
 }
 
 func (self StoreEntry) Base() string {
@@ -65,4 +84,8 @@ func (self StoreEntry) init() error {
 
 func (self StoreEntry) Delete() error {
 	return os.RemoveAll(self.base)
+}
+
+func sanitize(subpath string) string {
+	return strings.ReplaceAll(subpath, "/", "")
 }

@@ -17,7 +17,7 @@ func List(opt *ListOptions) (ids []string, err error) {
 		opt.Store, err = store.New(RuntimeDir)
 	}
 
-	path := opt.Store.Base()
+	path := opt.Store.EntryBase()
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
