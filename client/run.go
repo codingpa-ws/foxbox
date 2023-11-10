@@ -328,6 +328,7 @@ func dropSyscalls() error {
 		"set_mempolicy",
 		"userfaultfd",
 		"perf_event_open",
+		"chroot",
 	}
 
 	for _, name := range forbiddenCalls {
