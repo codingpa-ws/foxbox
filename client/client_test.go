@@ -44,8 +44,10 @@ func TestIntegration(t *testing.T) {
 		Store:   store,
 		Command: []string{"ls"},
 	})
-	fmt.Println("stdout", stdout.String())
-	fmt.Println("stderr", stderr.String())
+	if err != nil {
+		fmt.Println("stdout", stdout.String())
+		fmt.Println("stderr", stderr.String())
+	}
 	require.NoError(err)
 	require.Equal("bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n", stdout.String())
 	require.Equal("", stderr.String())
@@ -59,6 +61,10 @@ func TestIntegration(t *testing.T) {
 		Store:   store,
 		Command: []string{"ps", "aux"},
 	})
+	if err != nil {
+		fmt.Println("stdout", stdout.String())
+		fmt.Println("stderr", stderr.String())
+	}
 	require.NoError(err)
 	require.Equal("PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n", stdout.String())
 	require.Equal("", stderr.String())
