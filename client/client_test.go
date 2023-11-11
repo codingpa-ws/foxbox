@@ -1,6 +1,7 @@
 package client_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -43,6 +44,8 @@ func TestIntegration(t *testing.T) {
 		Store:   store,
 		Command: []string{"ls"},
 	})
+	fmt.Println("stdout", stdout.String())
+	fmt.Println("stderr", stderr.String())
 	require.NoError(err)
 	require.Equal("bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n", stdout.String())
 	require.Equal("", stderr.String())
