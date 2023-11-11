@@ -92,7 +92,7 @@ func run(name string, dir string, opt *RunOptions) error {
 	}
 	err := cmd.Run()
 	if cmd.ProcessState == nil {
-		return err
+		return fmt.Errorf("starting process (no process state): %w", err)
 	}
 	exit := cmd.ProcessState.ExitCode()
 	if exit != 0 {
