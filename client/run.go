@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
+	"strconv"
 	"syscall"
 
 	"github.com/codingpa-ws/foxbox/internal/store"
@@ -76,7 +78,19 @@ func Run(name string, opt *RunOptions) (err error) {
 }
 
 func run(name string, dir string, opt *RunOptions) error {
-	cmd := exec.Command("/proc/self/exe", opt.Command...)
+	executable, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("finding foxbox executable: %w", err)
+	}
+	user, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("getting current user: %w", err)
+	}
+	hostUid, err := strconv.ParseInt(user.Uid, 10, 16)
+	if err != nil {
+		return fmt.Errorf("parsing user uid (%s): %w", user.Uid, err)
+	}
+	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
@@ -87,10 +101,10 @@ func run(name string, dir string, opt *RunOptions) error {
 		Unshareflags: syscall.CLONE_NEWNS,
 		UidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0,
-			HostID:      1000,
+			HostID:      int(hostUid),
 			Size:        1}},
 	}
-	err := cmd.Run()
+	err = cmd.Run()
 	if cmd.ProcessState == nil {
 		return fmt.Errorf("starting process (no process state): %w", err)
 	}
