@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
 	"syscall"
 
 	"github.com/codingpa-ws/foxbox/internal/store"
@@ -76,7 +77,17 @@ func Run(name string, opt *RunOptions) (err error) {
 }
 
 func run(name string, dir string, opt *RunOptions) error {
-	cmd := exec.Command("/proc/self/exe", opt.Command...)
+	executable, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("finding foxbox executable: %w", err)
+	}
+	stat, err := os.Stat(executable)
+	if err != nil {
+		return fmt.Errorf("checking executable: %w", err)
+	}
+	fmt.Println(stat.Mode(), stat.Mode().String())
+	fmt.Println(user.Current())
+	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
@@ -90,7 +101,7 @@ func run(name string, dir string, opt *RunOptions) error {
 			HostID:      1000,
 			Size:        1}},
 	}
-	err := cmd.Run()
+	err = cmd.Run()
 	if cmd.ProcessState == nil {
 		return fmt.Errorf("starting process (no process state): %w", err)
 	}

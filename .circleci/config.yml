@@ -16,12 +16,13 @@ jobs:
       - run: wget https://go.dev/dl/go1.21.4.linux-amd64.tar.gz
       - run: sudo tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz
       - run: export PATH=$PATH:/usr/local/go/bin
+      - run: mkdir ~/tmp/
       - run:
-          name: Install libseccomp and bison
-          command: sudo apt-get update && sudo apt-get install libseccomp-dev bison
+          name: Install libseccomp
+          command: sudo apt-get update && sudo apt-get install libseccomp-dev
       - run:
           name: Run tests
-          command: go test -v ./...
+          command: TMPDIR=~/tmp/ go test -v ./...
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
