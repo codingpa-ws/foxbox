@@ -56,6 +56,10 @@ func TestIntegration(t *testing.T) {
 			command: []string{"pwd"},
 			stdout:  "/\n",
 		},
+		{
+			command: []string{"hostname"},
+			stdout:  name + "\n",
+		},
 	}
 
 	for _, command := range commands {
