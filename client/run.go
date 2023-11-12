@@ -82,14 +82,12 @@ func run(name string, dir string, opt *RunOptions) error {
 	if err != nil {
 		return fmt.Errorf("finding foxbox executable: %w", err)
 	}
-	user, err := user.Current()
+
+	uid, gid, err := getUserIdentifiers()
 	if err != nil {
-		return fmt.Errorf("getting current user: %w", err)
+		return err
 	}
-	hostUid, err := strconv.ParseInt(user.Uid, 10, 16)
-	if err != nil {
-		return fmt.Errorf("parsing user uid (%s): %w", user.Uid, err)
-	}
+
 	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
@@ -101,8 +99,13 @@ func run(name string, dir string, opt *RunOptions) error {
 		Unshareflags: syscall.CLONE_NEWNS,
 		UidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0,
-			HostID:      int(hostUid),
+			HostID:      int(uid),
 			Size:        1}},
+		GidMappings: []syscall.SysProcIDMap{{
+			ContainerID: 0,
+			HostID:      int(gid),
+			Size:        1,
+		}},
 	}
 	err = cmd.Run()
 	if cmd.ProcessState == nil {
@@ -117,6 +120,29 @@ func run(name string, dir string, opt *RunOptions) error {
 	}
 	return nil
 }
+
+func getUserIdentifiers() (uid, gid int, err error) {
+	user, err := user.Current()
+	if err != nil {
+		return 0, 0, fmt.Errorf("getting current user: %w", err)
+	}
+	parseInt := func(s string) (int, error) {
+		i, err := strconv.ParseInt(s, 10, 16)
+		return int(i), err
+	}
+
+	uid, err = parseInt(user.Uid)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parsing user uid (%s): %w", user.Uid, err)
+	}
+	gid, err = parseInt(user.Gid)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parsing user gid (%s): %w", user.Gid, err)
+	}
+
+	return
+}
+
 func child() (err error) {
 	name := os.Getenv("FOXBOX_EXEC")
 	err = prepareFs(name)
