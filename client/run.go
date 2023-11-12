@@ -126,16 +126,12 @@ func getUserIdentifiers() (uid, gid int, err error) {
 	if err != nil {
 		return 0, 0, fmt.Errorf("getting current user: %w", err)
 	}
-	parseInt := func(s string) (int, error) {
-		i, err := strconv.ParseInt(s, 10, 16)
-		return int(i), err
-	}
 
-	uid, err = parseInt(user.Uid)
+	uid, err = strconv.Atoi(user.Uid)
 	if err != nil {
 		return 0, 0, fmt.Errorf("parsing user uid (%s): %w", user.Uid, err)
 	}
-	gid, err = parseInt(user.Gid)
+	gid, err = strconv.Atoi(user.Gid)
 	if err != nil {
 		return 0, 0, fmt.Errorf("parsing user gid (%s): %w", user.Gid, err)
 	}
