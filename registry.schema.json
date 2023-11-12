@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/product.schema.json",
+  "title": "foxbox images",
+  "description": "Image registry for foxbox",
+  "type": "object",
+  "properties": {
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "versions": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "arch": {
+                  "enum": ["x86_64"]
+                },
+                "rootfs": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "pattern": "^https://.+.tar(\\.gz)?$"
+                    },
+                    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                  },
+                  "required": ["url", "sha256"]
+                }
+              },
+              "required": ["tags", "arch", "rootfs"]
+            }
+          }
+        },
+        "required": ["name", "versions"]
+      },
+      "uniqueItems": true,
+      "required": ["images"]
+    }
+  }
+}

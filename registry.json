@@ -1,0 +1,18 @@
+{
+  "$schema": "./registry.schema.json",
+  "images": [
+    {
+      "name": "alpine",
+      "versions": [
+        {
+          "tags": ["latest", "3.18", "3.18.4"],
+          "arch": "x86_64",
+          "rootfs": {
+            "url": "https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.4-x86_64.tar.gz",
+            "sha256": "c59d5203bc6b8b6ef81f3f6b63e32c28d6e47be806ba8528f8766a4ca506c7ba"
+          }
+        }
+      ]
+    }
+  ]
+}
