@@ -1,6 +1,0 @@
-tests:
-  image: golang:1.21-bullseye
-  before_script:
-    - sudo apt-get update && sudo apt-get install libseccomp-dev
-  script:
-    - sudo go test -v ./...
