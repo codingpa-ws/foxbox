@@ -60,6 +60,10 @@ func TestIntegration(t *testing.T) {
 			command: []string{"hostname"},
 			stdout:  name + "\n",
 		},
+		{
+			command: []string{"env"},
+			stdout:  "PATH=/bin:/sbin:/usr/bin:/usr/sbin\nLANG=C.UTF-8\nCHARSET=UTF-8\n",
+		},
 	}
 
 	for _, command := range commands {
