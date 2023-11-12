@@ -17,7 +17,7 @@ const AlpineImageURL = "https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86
 const AlpineImageName = "alpine-3.18.4-x86_64"
 
 func TestIntegration(t *testing.T) {
-	require := require.New(t)
+	requires := require.New(t)
 	if testing.Short() {
 		t.Skip("integration test is slow")
 	}
@@ -29,38 +29,51 @@ func TestIntegration(t *testing.T) {
 		Image: AlpineImageName,
 		Store: store,
 	})
-	require.NoError(err)
-	require.NotEmpty(name)
+	requires.NoError(err)
+	requires.NotEmpty(name)
 
 	entry, err := store.GetEntry(name)
-	require.NoError(err)
+	requires.NoError(err)
 
-	stdout, stderr := run(t, name, store, "ls")
+	commands := []struct {
+		command []string
+		stdout  string
+		stderr  string
+	}{
+		{
+			command: []string{"ls"},
+			stdout:  "bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n",
+		},
+		{
+			command: []string{"ps", "aux"},
+			stdout:  "PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n",
+		},
+		{
+			command: []string{"sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`},
+			stdout:  "name=root,uid=0,gid=0\n",
+		},
+	}
 
-	require.Equal("bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n", stdout)
-	require.Equal("", stderr)
+	for _, command := range commands {
+		t.Run("command "+strings.Join(command.command, " "), func(t *testing.T) {
+			stdout, stderr := run(t, name, store, command.command...)
 
-	stdout, stderr = run(t, name, store, "ps", "aux")
-
-	require.Equal("PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n", stdout)
-	require.Equal("", stderr)
-
-	stdout, stderr = run(t, name, store, "sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`)
-
-	require.Equal("name=root,uid=0,gid=0\n", stdout)
-	require.Equal("", stderr)
+			require.Equal(t, command.stdout, stdout)
+			require.Equal(t, command.stderr, stderr)
+		})
+	}
 
 	info, err := os.Stat(entry.FileSystem())
-	require.NoError(err)
-	require.Truef(info.IsDir(), "%s (box filesystem path) must be a directory", entry.FileSystem())
+	requires.NoError(err)
+	requires.Truef(info.IsDir(), "%s (box filesystem path) must be a directory", entry.FileSystem())
 
 	err = client.Delete(name, &client.DeleteOptions{
 		Store: store,
 	})
-	require.NoError(err)
+	requires.NoError(err)
 
 	_, err = os.Stat(entry.FileSystem())
-	require.ErrorIs(err, os.ErrNotExist, "client.Delete(string) didn’t delete container")
+	requires.ErrorIs(err, os.ErrNotExist, "client.Delete(string) didn’t delete container")
 }
 
 func run(
