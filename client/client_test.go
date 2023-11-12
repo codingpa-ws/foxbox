@@ -69,6 +69,19 @@ func TestIntegration(t *testing.T) {
 	require.Equal("PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n", stdout.String())
 	require.Equal("", stderr.String())
 
+	stdout = new(strings.Builder)
+	stderr = new(strings.Builder)
+
+	err = client.Run(name, &client.RunOptions{
+		Stdout:  stdout,
+		Stderr:  stderr,
+		Store:   store,
+		Command: []string{"sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`},
+	})
+	require.NoError(err)
+	require.Equal("name=root,uid=0,gid=0\n", stdout.String())
+	require.Equal("", stderr.String())
+
 	info, err := os.Stat(entry.FileSystem())
 	require.NoError(err)
 	require.Truef(info.IsDir(), "%s (box filesystem path) must be a directory", entry.FileSystem())
