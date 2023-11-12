@@ -35,52 +35,20 @@ func TestIntegration(t *testing.T) {
 	entry, err := store.GetEntry(name)
 	require.NoError(err)
 
-	stdout := new(strings.Builder)
-	stderr := new(strings.Builder)
+	stdout, stderr := run(t, name, store, "ls")
 
-	err = client.Run(name, &client.RunOptions{
-		Stdout:  stdout,
-		Stderr:  stderr,
-		Store:   store,
-		Command: []string{"ls"},
-	})
-	if err != nil {
-		fmt.Println("stdout", stdout.String())
-		fmt.Println("stderr", stderr.String())
-	}
-	require.NoError(err)
-	require.Equal("bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n", stdout.String())
-	require.Equal("", stderr.String())
+	require.Equal("bin\ndev\netc\nhome\nlib\nmedia\nmnt\nopt\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n", stdout)
+	require.Equal("", stderr)
 
-	stdout = new(strings.Builder)
-	stderr = new(strings.Builder)
+	stdout, stderr = run(t, name, store, "ps", "aux")
 
-	err = client.Run(name, &client.RunOptions{
-		Stdout:  stdout,
-		Stderr:  stderr,
-		Store:   store,
-		Command: []string{"ps", "aux"},
-	})
-	if err != nil {
-		fmt.Println("stdout", stdout.String())
-		fmt.Println("stderr", stderr.String())
-	}
-	require.NoError(err)
-	require.Equal("PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n", stdout.String())
-	require.Equal("", stderr.String())
+	require.Equal("PID   USER     TIME  COMMAND\n    1 root      0:00 {sh} ps aux\n", stdout)
+	require.Equal("", stderr)
 
-	stdout = new(strings.Builder)
-	stderr = new(strings.Builder)
+	stdout, stderr = run(t, name, store, "sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`)
 
-	err = client.Run(name, &client.RunOptions{
-		Stdout:  stdout,
-		Stderr:  stderr,
-		Store:   store,
-		Command: []string{"sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`},
-	})
-	require.NoError(err)
-	require.Equal("name=root,uid=0,gid=0\n", stdout.String())
-	require.Equal("", stderr.String())
+	require.Equal("name=root,uid=0,gid=0\n", stdout)
+	require.Equal("", stderr)
 
 	info, err := os.Stat(entry.FileSystem())
 	require.NoError(err)
@@ -93,6 +61,28 @@ func TestIntegration(t *testing.T) {
 
 	_, err = os.Stat(entry.FileSystem())
 	require.ErrorIs(err, os.ErrNotExist, "client.Delete(string) didn’t delete container")
+}
+
+func run(
+	t *testing.T,
+	name string,
+	store *store.Store,
+	command ...string,
+) (stdout, stderr string) {
+	stdoutBuilder := new(strings.Builder)
+	stderrBuilder := new(strings.Builder)
+	err := client.Run(name, &client.RunOptions{
+		Stdout:  stdoutBuilder,
+		Stderr:  stderrBuilder,
+		Store:   store,
+		Command: command,
+	})
+	if err != nil {
+		fmt.Println("stdout", stdoutBuilder.String())
+		fmt.Println("stderr", stderrBuilder.String())
+	}
+	require.NoError(t, err)
+	return stdoutBuilder.String(), stderrBuilder.String()
 }
 
 func downloadImage(t *testing.T) (*store.Store, func()) {
