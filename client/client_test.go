@@ -52,6 +52,10 @@ func TestIntegration(t *testing.T) {
 			command: []string{"sh", "-c", `echo "name=$(whoami),uid=$(id -u),gid=$(id -g)"`},
 			stdout:  "name=root,uid=0,gid=0\n",
 		},
+		{
+			command: []string{"pwd"},
+			stdout:  "/\n",
+		},
 	}
 
 	for _, command := range commands {
