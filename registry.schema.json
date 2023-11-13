@@ -17,7 +17,8 @@
               "properties": {
                 "tags": { "type": "array", "items": { "type": "string" } },
                 "arch": {
-                  "enum": ["x86_64"]
+                  "$comment": "Source within foxbox is runtime.GOARCH",
+                  "enum": ["amd64"]
                 },
                 "rootfs": {
                   "type": "object",
