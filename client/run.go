@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/codingpa-ws/foxbox/internal/cgroup2"
 	"github.com/codingpa-ws/foxbox/internal/store"
 
 	seccomp "github.com/seccomp/libseccomp-golang"
@@ -24,6 +25,10 @@ type RunOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	MaxCPUs        float32
+	MaxMemoryBytes uint
+	MaxProcesses   uint
 }
 
 func (self RunOptions) getStdin() io.Reader {
@@ -87,15 +92,32 @@ func run(name string, dir string, opt *RunOptions) error {
 	if err != nil {
 		return err
 	}
+	cgroup, err := cgroup2.Open("foxbox-" + name)
+	if err != nil {
+		return fmt.Errorf("creating cgroup foxbox-%s: %w", name, err)
+	}
+	defer func() {
+		err = errors.Join(err, cgroup.Delete())
+	}()
+
+	cgroupDir, err := os.Open(cgroup.Path())
+	if err != nil {
+		return fmt.Errorf("opening cgroup dir: %w", err)
+	}
+	defer cgroupDir.Close()
+	err = setupCgroup(cgroup, opt)
+	if err != nil {
+		return fmt.Errorf("setting up cgroup: %w", err)
+	}
 
 	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
 	cmd.Dir = dir
-	cmd.Env = []string{"FOXBOX_EXEC=" + name}
+	cmd.Env = []string{"FOXBOX_EXEC=" + name, "FOXBOX_CGROUP_DIR=" + cgroup.Path()}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME,
+		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME | syscall.CLONE_NEWCGROUP,
 		Unshareflags: syscall.CLONE_NEWNS,
 		UidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0,
@@ -106,6 +128,8 @@ func run(name string, dir string, opt *RunOptions) error {
 			HostID:      int(gid),
 			Size:        1,
 		}},
+		CgroupFD:    int(cgroupDir.Fd()),
+		UseCgroupFD: true,
 	}
 	err = cmd.Run()
 	if cmd.ProcessState == nil {
@@ -134,6 +158,31 @@ func getUserIdentifiers() (uid, gid int, err error) {
 	gid, err = strconv.Atoi(user.Gid)
 	if err != nil {
 		return 0, 0, fmt.Errorf("parsing user gid (%s): %w", user.Gid, err)
+	}
+
+	return
+}
+
+func setupCgroup(cgroup *cgroup2.CGroup, opt *RunOptions) (err error) {
+	var maxProcesses uint = 10_000
+	if opt.MaxProcesses > 0 {
+		maxProcesses = opt.MaxProcesses
+	}
+
+	err = cgroup.LimitPIDs(maxProcesses)
+	if err != nil {
+		return fmt.Errorf("limiting pid count: %w", err)
+	}
+
+	if opt.MaxCPUs > 0 {
+		err = cgroup.LimitCPUs(opt.MaxCPUs)
+		if err != nil {
+			return fmt.Errorf("limiting cpu count: %w", err)
+		}
+	}
+
+	if opt.MaxMemoryBytes > 0 {
+		err = cgroup.LimitMemory(opt.MaxMemoryBytes)
 	}
 
 	return
@@ -203,6 +252,8 @@ func enterFs() (err error) {
 		syscall.Chroot("."),
 		os.Chdir("/"),
 		syscall.Mount("proc", "proc", "proc", 0, ""),
+		// TODO: figure out if sysfs can be mounted securely?
+		// syscall.Mount("sysfs", "sys", "sysfs", 0, ""),
 	)
 }
 

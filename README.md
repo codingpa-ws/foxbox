@@ -59,13 +59,15 @@ with
 - [ ] Enter foxboxes by with [nsenter][nsenter]
 - [ ] Image management (pull, show, ls, rm)
 - [ ] Box inspect (analog to `podman inspect`)
+- [ ] Run foxes detached
+- [ ] Store logs
 - Isolation
   - [x] User namespaces
   - [x] Dropping kernel capabilities
   - [x] Syscall restriction with seccomp
   - [x] Standard streams (stdin, stdout, stderr)
   - [x] `/dev/{null,zero,urandom,random,tty}` access
-  - [ ] Cgroups v2
+  - [x] Cgroups v2 (cpu, memory, pids)
 - Networking
   - [ ] Host networking
   - [ ] slirp4netns
