@@ -26,7 +26,6 @@ func (self CGroup) Delete() error {
 }
 
 func (self CGroup) write(file string, value string) error {
-	fmt.Println("limiting", file, "to", value)
 	path := filepath.Join(self.Path(), sanitize(file))
 	return os.WriteFile(path, []byte(value), 0)
 }
