@@ -23,7 +23,7 @@ jobs:
           command: sudo apt-get update && sudo apt-get install libseccomp-dev slirp4netns -y
       - run:
           name: Run tests
-          command: TMPDIR=~/tmp/ gotestsum -f testdox ./...
+          command: TMPDIR=~/tmp/ CI_NO_CGROUP=1 gotestsum -f testdox ./...
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows

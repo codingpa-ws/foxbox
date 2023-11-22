@@ -132,7 +132,7 @@ func run(name string, dir string, opt *RunOptions) error {
 			Size:        1,
 		}},
 		CgroupFD:    int(cgroupDir.Fd()),
-		UseCgroupFD: true,
+		UseCgroupFD: os.Getenv("CI_NO_CGROUP") == "",
 	}
 	err = cmd.Start()
 	if err != nil {
