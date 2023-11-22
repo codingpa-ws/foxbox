@@ -20,10 +20,8 @@ jobs:
       - run: go install gotest.tools/gotestsum@latest
       - run:
           name: Install libseccomp
-          command: sudo apt-get update && sudo apt-get install libseccomp-dev
-      - run:
-          name: Install systemd
-          command: sudo apt-get -y install systemd
+          command: sudo apt-get update && sudo apt-get install libseccomp-dev tree
+      - run: find /sys/fs/cgroup 2>/dev/null -exec ls -ald '{}' \;
       - run:
           name: Run tests
           command: TMPDIR=~/tmp/ gotestsum -f testdox ./...
