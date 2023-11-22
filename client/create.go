@@ -2,11 +2,9 @@ package client
 
 import (
 	"archive/tar"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/codingpa-ws/foxbox/internal/store"
 	"github.com/klauspost/pgzip"
@@ -51,14 +49,11 @@ func Create(opt *CreateOptions) (name string, err error) {
 		return
 	}
 
-	start := time.Now()
 	err = extractImage(image, gzipped, entry.FileSystem())
 
 	if err != nil {
 		entry.Delete()
 	}
-
-	fmt.Println(time.Since(start))
 
 	return
 }
