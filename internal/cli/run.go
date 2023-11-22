@@ -20,6 +20,10 @@ func init() {
 				Name:  "rm",
 				Usage: "removes the foxbox after execution has finished",
 			},
+			&cli.BoolFlag{
+				Name:  "disable-network",
+				Usage: "disables bridge networking (via slirp)",
+			},
 		},
 	})
 }
@@ -50,7 +54,8 @@ func run(ctx *cli.Context) (err error) {
 	}
 
 	err = client.Run(id, &client.RunOptions{
-		Command: args.Slice()[1:],
+		Command:          args.Slice()[1:],
+		EnableNetworking: true,
 	})
 
 	return

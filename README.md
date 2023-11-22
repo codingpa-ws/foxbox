@@ -70,7 +70,7 @@ with
   - [x] Cgroups v2 (cpu, memory, pids)
 - Networking
   - [ ] Host networking
-  - [ ] slirp4netns
+  - [x] slirp4netns
   - [ ] Port forwarding
 - Volumes
   - [ ] Global volumes

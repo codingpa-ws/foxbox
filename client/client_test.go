@@ -64,6 +64,10 @@ func TestIntegration(t *testing.T) {
 			command: []string{"env"},
 			stdout:  "PATH=/bin:/sbin:/usr/bin:/usr/sbin\nLANG=C.UTF-8\nCHARSET=UTF-8\n",
 		},
+		{
+			command: []string{"sh", "-c", `apk update > /dev/null; apk add tree -s`},
+			stdout:  "(1/1) Installing tree (2.1.1-r0)\nOK: 7 MiB in 15 packages\n",
+		},
 	}
 
 	for _, command := range commands {
@@ -97,10 +101,11 @@ func run(
 	stdoutBuilder := new(strings.Builder)
 	stderrBuilder := new(strings.Builder)
 	err := client.Run(name, &client.RunOptions{
-		Stdout:  stdoutBuilder,
-		Stderr:  stderrBuilder,
-		Store:   store,
-		Command: command,
+		Stdout:           stdoutBuilder,
+		Stderr:           stderrBuilder,
+		Store:            store,
+		Command:          command,
+		EnableNetworking: true,
 	})
 	if err != nil {
 		fmt.Println("stdout", stdoutBuilder.String())

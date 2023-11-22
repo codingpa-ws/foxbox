@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/codingpa-ws/foxbox/internal/cgroup2"
+	"github.com/codingpa-ws/foxbox/internal/slirp"
 	"github.com/codingpa-ws/foxbox/internal/store"
 
 	seccomp "github.com/seccomp/libseccomp-golang"
@@ -25,6 +26,8 @@ type RunOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	EnableNetworking bool
 
 	MaxCPUs        float32
 	MaxMemoryBytes uint
@@ -131,7 +134,22 @@ func run(name string, dir string, opt *RunOptions) error {
 		CgroupFD:    int(cgroupDir.Fd()),
 		UseCgroupFD: true,
 	}
-	err = cmd.Run()
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("starting process: %w", err)
+	}
+	if opt.EnableNetworking {
+		slirp, err := slirp.Start(cmd.Process.Pid)
+		if err != nil {
+			cmd.Process.Kill()
+			return fmt.Errorf("starting slirp (networking): %w", err)
+		}
+		defer slirp.Process.Kill()
+	}
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("waiting for process to end: %w", err)
+	}
 	if cmd.ProcessState == nil {
 		return fmt.Errorf("starting process (no process state): %w", err)
 	}
@@ -209,6 +227,10 @@ func child() (err error) {
 	err = dropSyscalls()
 	if err != nil {
 		return fmt.Errorf("dropping syscall permissions: %w", err)
+	}
+	err = setupResolvConf()
+	if err != nil {
+		return fmt.Errorf("setting up resolv.conf: %w", err)
 	}
 	args := []string{"sh"}
 	if len(os.Args) > 1 {
@@ -495,4 +517,9 @@ func linkStandardStreams() (err error) {
 		return fmt.Errorf("linking /dev/fd: %w", err)
 	}
 	return
+}
+
+func setupResolvConf() error {
+	const resolv = "nameserver 10.0.2.3\n"
+	return os.WriteFile("/etc/resolv.conf", []byte(resolv), 0644)
 }
