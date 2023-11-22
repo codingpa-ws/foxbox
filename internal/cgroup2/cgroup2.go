@@ -61,7 +61,7 @@ func (self CGroup) AddPID(pid int) error {
 func Open(name string) (*CGroup, error) {
 	uid := os.Getuid()
 	const basePath = "/sys/fs/cgroup/user.slice/"
-	path := fmt.Sprintf("%suser-%d.slice/user@%d.service/%s", basePath, uid, uid, name)
+	path := fmt.Sprintf("%suser-%d.slice/user@%d.service/app.slice/%s", basePath, uid, uid, name)
 
 	cgroup := FromPath(path)
 
