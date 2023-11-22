@@ -118,7 +118,7 @@ func run(name string, dir string, opt *RunOptions) error {
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
 	cmd.Dir = dir
-	cmd.Env = []string{"FOXBOX_EXEC=" + name, "FOXBOX_CGROUP_DIR=" + cgroup.Path()}
+	cmd.Env = []string{"FOXBOX_EXEC=" + name}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME | syscall.CLONE_NEWCGROUP,
 		Unshareflags: syscall.CLONE_NEWNS,
