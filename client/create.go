@@ -2,12 +2,14 @@ package client
 
 import (
 	"archive/tar"
-	"compress/gzip"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/codingpa-ws/foxbox/internal/store"
+	"github.com/klauspost/pgzip"
 )
 
 type CreateOptions struct {
@@ -49,11 +51,14 @@ func Create(opt *CreateOptions) (name string, err error) {
 		return
 	}
 
+	start := time.Now()
 	err = extractImage(image, gzipped, entry.FileSystem())
 
 	if err != nil {
 		entry.Delete()
 	}
+
+	fmt.Println(time.Since(start))
 
 	return
 }
@@ -61,7 +66,7 @@ func Create(opt *CreateOptions) (name string, err error) {
 func extractImage(image io.ReadCloser, ungzip bool, path string) error {
 	if ungzip {
 		var err error
-		image, err = gzip.NewReader(image)
+		image, err = pgzip.NewReader(image)
 		if err != nil {
 			return err
 		}
@@ -97,11 +102,11 @@ func extractImage(image io.ReadCloser, ungzip bool, path string) error {
 				return err
 			}
 
+			defer f.Close()
+
 			if _, err := io.Copy(f, tr); err != nil {
 				return err
 			}
-
-			f.Close()
 		case tar.TypeSymlink:
 			if err := os.Symlink(header.Linkname, fpath); err != nil {
 				return err
