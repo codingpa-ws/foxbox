@@ -228,10 +228,6 @@ func child() (err error) {
 	if err != nil {
 		return fmt.Errorf("dropping syscall permissions: %w", err)
 	}
-	err = setupResolvConf()
-	if err != nil {
-		return fmt.Errorf("setting up resolv.conf: %w", err)
-	}
 	args := []string{"sh"}
 	if len(os.Args) > 1 {
 		args = os.Args[1:]
@@ -517,9 +513,4 @@ func linkStandardStreams() (err error) {
 		return fmt.Errorf("linking /dev/fd: %w", err)
 	}
 	return
-}
-
-func setupResolvConf() error {
-	const resolv = "nameserver 10.0.2.3\n"
-	return os.WriteFile("/etc/resolv.conf", []byte(resolv), 0644)
 }

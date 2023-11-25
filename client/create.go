@@ -53,6 +53,13 @@ func Create(opt *CreateOptions) (name string, err error) {
 
 	if err != nil {
 		entry.Delete()
+		return
+	}
+
+	err = setupResolvConf(entry)
+	if err != nil {
+		entry.Delete()
+		return
 	}
 
 	return
@@ -108,4 +115,14 @@ func extractImage(image io.ReadCloser, ungzip bool, path string) error {
 			}
 		}
 	}
+}
+
+const resolvConf = "nameserver 10.0.2.3\n"
+
+func setupResolvConf(entry *store.StoreEntry) error {
+	path := filepath.Join(entry.FileSystem(), "etc", "resolv.conf")
+	if _, err := os.Stat(filepath.Dir(path)); err != nil {
+		return nil
+	}
+	return os.WriteFile(path, []byte(resolvConf), 0644)
 }
