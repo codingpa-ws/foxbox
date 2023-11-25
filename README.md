@@ -49,8 +49,8 @@ hostname of the box.
 
 ## Features
 
-While interop is really cool, I’m not planning to make foxbox compataible
-with
+While interop is really cool, I’m not planning to make foxbox compatible
+with the OCI runtime spec, though it might be a fun challenge later on.
 
 - [x] Create and delete foxboxes from rootfs tarballs
 - [x] List all foxboxes
