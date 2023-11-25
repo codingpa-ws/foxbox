@@ -77,6 +77,7 @@ with
   - [ ] Local volumes (`-v $(pwd):/workdir`)
   - [ ] tempfs mounts
 - [ ] Store foxboxes in a fixed place (e.g. `/var` or `~/.foxbox`)
+- [ ] Run as daemon to simplify configs
 
 [ociif]: https://github.com/opencontainers/image-spec
 [nsenter]: https://github.com/opencontainers/runc/blob/main/libcontainer/nsenter/README.md
