@@ -39,6 +39,7 @@ func TestIntegration(t *testing.T) {
 		command []string
 		stdout  string
 		stderr  string
+		err     string
 	}{
 		{
 			command: []string{"ls"},
@@ -68,12 +69,21 @@ func TestIntegration(t *testing.T) {
 			command: []string{"sh", "-c", `apk update > /dev/null; apk add tree -s`},
 			stdout:  "(1/1) Installing tree (2.1.1-r0)\nOK: 7 MiB in 15 packages\n",
 		},
+		{
+			command: []string{"sh", "-c", "exit 42"},
+			err:     "exit status 42",
+		},
 	}
 
 	for _, command := range commands {
 		t.Run("command "+strings.Join(command.command, " "), func(t *testing.T) {
-			stdout, stderr := run(t, name, store, command.command...)
+			stdout, stderr, err := run(t, name, store, command.command...)
 
+			var errString string
+			if err != nil {
+				errString = err.Error()
+			}
+			require.Equal(t, command.err, errString)
 			require.Equal(t, command.stdout, stdout)
 			require.Equal(t, command.stderr, stderr)
 		})
@@ -97,10 +107,10 @@ func run(
 	name string,
 	store *store.Store,
 	command ...string,
-) (stdout, stderr string) {
+) (stdout, stderr string, err error) {
 	stdoutBuilder := new(strings.Builder)
 	stderrBuilder := new(strings.Builder)
-	err := client.Run(name, &client.RunOptions{
+	err = client.Run(name, &client.RunOptions{
 		Stdout:           stdoutBuilder,
 		Stderr:           stderrBuilder,
 		Store:            store,
@@ -111,8 +121,7 @@ func run(
 		fmt.Println("stdout", stdoutBuilder.String())
 		fmt.Println("stderr", stderrBuilder.String())
 	}
-	require.NoError(t, err)
-	return stdoutBuilder.String(), stderrBuilder.String()
+	return stdoutBuilder.String(), stderrBuilder.String(), err
 }
 
 func downloadImage(t *testing.T) (*store.Store, func()) {

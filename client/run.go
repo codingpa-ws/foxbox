@@ -2,7 +2,6 @@ package client
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -147,20 +146,10 @@ func run(name string, dir string, opt *RunOptions) error {
 		defer slirp.Process.Kill()
 	}
 	err = cmd.Wait()
-	if err != nil {
-		return fmt.Errorf("waiting for process to end: %w", err)
-	}
 	if cmd.ProcessState == nil {
 		return fmt.Errorf("starting process (no process state): %w", err)
 	}
-	exit := cmd.ProcessState.ExitCode()
-	if exit != 0 {
-		if flag.Lookup("test.v") != nil {
-			return fmt.Errorf("exited with code %d", exit)
-		}
-		os.Exit(exit)
-	}
-	return nil
+	return err
 }
 
 func getUserIdentifiers() (uid, gid int, err error) {

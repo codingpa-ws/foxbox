@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/codingpa-ws/foxbox/client"
@@ -80,6 +83,11 @@ func run(ctx *cli.Context) (err error) {
 		MaxCPUs:          float32(ctx.Float64("cpu")),
 		MaxProcesses:     ctx.Uint("max-pids"),
 	})
+
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
+		os.Exit(exitError.ExitCode())
+	}
 
 	return
 }
