@@ -55,9 +55,7 @@ with
 - [x] Create and delete foxboxes from rootfs tarballs
 - [x] List all foxboxes
 - [ ] List running foxes
-- [ ] Pull images
 - [ ] Enter foxboxes by with [nsenter][nsenter]
-- [ ] Image management (pull, show, ls, rm)
 - [ ] Box inspect (analog to `podman inspect`)
 - [ ] Run foxes detached
 - [ ] Store logs
@@ -72,6 +70,10 @@ with
   - [ ] Host networking
   - [x] slirp4netns
   - [ ] Port forwarding
+- Image management
+  - [ ] List/show images
+  - [ ] Pull images from registry
+  - [ ] Remove images
 - Volumes
   - [ ] Global volumes
   - [ ] Local volumes (`-v $(pwd):/workdir`)
