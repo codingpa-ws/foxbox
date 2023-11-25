@@ -32,6 +32,10 @@ func init() {
 				Name:  "memory",
 				Usage: `limits the available memory (supports bytes but also e.g. "1MB" or "128 kilobytes")`,
 			},
+			&cli.UintFlag{
+				Name:  "max-pids",
+				Usage: "limits the number of processes",
+			},
 		},
 	})
 }
@@ -74,6 +78,7 @@ func run(ctx *cli.Context) (err error) {
 		EnableNetworking: true,
 		MaxMemoryBytes:   uint(v.Bytes()),
 		MaxCPUs:          float32(ctx.Float64("cpu")),
+		MaxProcesses:     ctx.Uint("max-pids"),
 	})
 
 	return
