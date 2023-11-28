@@ -80,5 +80,9 @@ func FromPath(path string) *CGroup {
 }
 
 func sanitize(subpath string) string {
-	return strings.ReplaceAll(subpath, "/", "")
+	subpath = strings.ReplaceAll(subpath, "/", "")
+	if subpath == ".." {
+		return ""
+	}
+	return subpath
 }
