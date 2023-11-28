@@ -3,17 +3,16 @@ package client_test
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/codingpa-ws/foxbox/client"
 	"github.com/codingpa-ws/foxbox/internal/store"
+	"github.com/codingpa-ws/foxbox/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-const AlpineImageURL = "https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.4-x86_64.tar.gz"
 const AlpineImageName = "alpine-3.18.4-x86_64"
 
 func TestIntegration(t *testing.T) {
@@ -131,17 +130,15 @@ func downloadImage(t *testing.T) (*store.Store, func()) {
 	store, err := store.New(base)
 	require.NoError(err)
 
-	resp, err := http.Get(AlpineImageURL)
+	alpineImage, err := testutil.DownloadAlpineImage()
 	require.NoError(err)
-	require.Equal(http.StatusOK, resp.StatusCode)
-
-	defer resp.Body.Close()
+	defer alpineImage.Close()
 
 	file, err := os.OpenFile(store.GetImagePath(AlpineImageName, true), os.O_CREATE|os.O_WRONLY, 0644)
 	require.NoError(err)
 	defer file.Close()
 
-	_, err = io.Copy(file, resp.Body)
+	_, err = io.Copy(file, alpineImage)
 	require.NoError(err)
 
 	return store, func() {
