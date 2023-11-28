@@ -74,6 +74,7 @@ with the OCI runtime spec, though it might be a fun challenge later on.
   - [ ] List/show images
   - [ ] Pull images from registry
   - [ ] Remove images
+  - [ ] Building images (Boxfile? Foxfile?)
 - Volumes
   - [ ] Global volumes
   - [ ] Local volumes (`-v $(pwd):/workdir`)
