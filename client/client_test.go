@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/codingpa-ws/foxbox/client"
 	"github.com/codingpa-ws/foxbox/internal/store"
@@ -99,6 +100,44 @@ func TestIntegration(t *testing.T) {
 
 	_, err = os.Stat(entry.FileSystem())
 	requires.ErrorIs(err, os.ErrNotExist, "client.Delete(string) didn’t delete container")
+}
+
+func TestRun(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test is slow")
+	}
+	t.Run("in parallel must fail", func(t *testing.T) {
+		require := require.New(t)
+
+		store, deleteStore := downloadImage(t)
+		defer deleteStore()
+
+		name, err := client.Create(&client.CreateOptions{
+			Image: AlpineImageName,
+			Store: store,
+		})
+		require.NoError(err)
+
+		firstRunErr := make(chan error)
+		go func() {
+			fmt.Println("start")
+			err := client.Run(name, &client.RunOptions{
+				Command: []string{"sleep", "0.1"},
+				Store:   store,
+			})
+			fmt.Println("end")
+			firstRunErr <- err
+		}()
+		// yeah, currently vulnerable to race condition
+		time.Sleep(time.Millisecond * 10)
+
+		err = client.Run(name, &client.RunOptions{
+			Command: []string{"ls"},
+			Store:   store,
+		})
+		require.Error(err, "client must prevent running a container twice in parallel")
+		require.NoError(<-firstRunErr)
+	})
 }
 
 func run(
