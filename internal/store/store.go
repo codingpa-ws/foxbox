@@ -2,8 +2,10 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -76,6 +78,33 @@ func (self StoreEntry) Base() string {
 
 func (self StoreEntry) FileSystem() string {
 	return filepath.Join(self.base, "boxfs")
+}
+
+func (self StoreEntry) SetPID(pid int) error {
+	str := strconv.Itoa(pid)
+	path := filepath.Join(self.Base(), "container.pid")
+	return os.WriteFile(path, []byte(str), 0644)
+}
+
+func (self StoreEntry) GetPID() (pid int, running bool, err error) {
+	path := filepath.Join(self.Base(), "container.pid")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return 0, false, err
+	}
+	pid, err = strconv.Atoi(string(b))
+	if err != nil {
+		return 0, false, err
+	}
+	_, err = os.Stat(fmt.Sprintf("/proc/%d", pid))
+	if os.IsNotExist(err) {
+		return pid, false, nil
+	}
+	if err != nil {
+		return
+	}
+
+	return pid, true, nil
 }
 
 func (self StoreEntry) init() error {

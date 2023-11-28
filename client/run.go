@@ -79,12 +79,19 @@ func Run(name string, opt *RunOptions) (err error) {
 		return
 	}
 
-	err = run(name, entry.FileSystem(), opt)
+	err = run(name, entry, opt)
 
 	return
 }
 
-func run(name string, dir string, opt *RunOptions) error {
+func run(name string, entry *store.StoreEntry, opt *RunOptions) error {
+	conflictingPID, running, err := entry.GetPID()
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("getting pid of potentially conflicting process: %w", err)
+	}
+	if running {
+		return fmt.Errorf("already running with pid %d, use client.Exec", conflictingPID)
+	}
 	executable, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("finding foxbox executable: %w", err)
@@ -116,7 +123,7 @@ func run(name string, dir string, opt *RunOptions) error {
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
-	cmd.Dir = dir
+	cmd.Dir = entry.FileSystem()
 	cmd.Env = []string{"FOXBOX_EXEC=" + name}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME | syscall.CLONE_NEWCGROUP,
@@ -136,6 +143,11 @@ func run(name string, dir string, opt *RunOptions) error {
 	err = cmd.Start()
 	if err != nil {
 		return fmt.Errorf("starting process: %w", err)
+	}
+	err = entry.SetPID(cmd.Process.Pid)
+	if err != nil {
+		cmd.Process.Kill()
+		return fmt.Errorf("setting box pid: %w", err)
 	}
 	if opt.EnableNetworking {
 		slirp, err := slirp.Start(cmd.Process.Pid)
