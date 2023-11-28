@@ -15,6 +15,9 @@ func List(opt *ListOptions) (ids []string, err error) {
 
 	if opt.Store == nil {
 		opt.Store, err = store.New(RuntimeDir)
+		if err != nil {
+			return
+		}
 	}
 
 	path := opt.Store.EntryBase()
