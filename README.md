@@ -77,7 +77,7 @@ with the OCI runtime spec, though it might be a fun challenge later on.
   - [ ] Building images (Boxfile? Foxfile?)
 - Volumes
   - [ ] Global volumes
-  - [ ] Local volumes (`-v $(pwd):/workdir`)
+  - [x] Local volumes (`-v $(pwd):/workdir`)
   - [ ] tempfs mounts
 - [ ] Store foxboxes in a fixed place (e.g. `/var` or `~/.foxbox`)
 - [ ] Run as daemon to simplify configs
