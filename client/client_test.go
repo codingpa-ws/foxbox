@@ -73,6 +73,10 @@ func TestIntegration(t *testing.T) {
 			command: []string{"sh", "-c", "exit 42"},
 			err:     "exit status 42",
 		},
+		{
+			command: []string{"ls", "/opt/foxbox"},
+			stdout:  "main.go\n",
+		},
 	}
 
 	for _, command := range commands {
@@ -154,6 +158,10 @@ func run(
 		Store:            store,
 		Command:          command,
 		EnableNetworking: true,
+		Volumes: []client.VolumeConfig{{
+			HostPath: "../cmd/foxbox",
+			BoxPath:  "/opt/foxbox",
+		}},
 	})
 	if err != nil {
 		fmt.Println("stdout", stdoutBuilder.String())

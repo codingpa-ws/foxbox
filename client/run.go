@@ -1,12 +1,15 @@
 package client
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -18,6 +21,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type VolumeConfig struct {
+	HostPath, BoxPath string
+}
+
 type RunOptions struct {
 	Command []string
 	Store   *store.Store
@@ -25,6 +32,8 @@ type RunOptions struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+
+	Volumes []VolumeConfig
 
 	EnableNetworking bool
 
@@ -118,13 +127,17 @@ func run(name string, entry *store.StoreEntry, opt *RunOptions) error {
 	if err != nil {
 		return fmt.Errorf("setting up cgroup: %w", err)
 	}
+	volumes, err := encodeVolumes(&opt.Volumes)
+	if err != nil {
+		return fmt.Errorf("encoding volume data (%v): %w", opt.Volumes, err)
+	}
 
 	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
 	cmd.Dir = entry.FileSystem()
-	cmd.Env = []string{"FOXBOX_EXEC=" + name}
+	cmd.Env = []string{"FOXBOX_EXEC=" + name, "FOXBOX_MOUNTS=" + volumes}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET | syscall.CLONE_NEWTIME | syscall.CLONE_NEWCGROUP,
 		Unshareflags: syscall.CLONE_NEWNS,
@@ -207,6 +220,31 @@ func setupCgroup(cgroup *cgroup2.CGroup, opt *RunOptions) (err error) {
 	return
 }
 
+func encodeVolumes(volumes *[]VolumeConfig) (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("getting work dir: %w", err)
+	}
+	for key, volume := range *volumes {
+		if !filepath.IsAbs(volume.HostPath) {
+			volume.HostPath = filepath.Join(wd, volume.HostPath)
+		}
+
+		if !filepath.IsAbs(volume.BoxPath) {
+			volume.BoxPath = "/" + volume.BoxPath
+		}
+		(*volumes)[key] = volume
+	}
+
+	mountBuf := new(bytes.Buffer)
+	err = gob.NewEncoder(mountBuf).Encode(volumes)
+	if err != nil {
+		return "", fmt.Errorf("serializing volumes: %w", err)
+	}
+
+	return fmt.Sprintf("%x", mountBuf.String()), nil
+}
+
 func child() (err error) {
 	name := os.Getenv("FOXBOX_EXEC")
 	err = prepareFs(name)
@@ -243,6 +281,11 @@ func child() (err error) {
 }
 
 func prepareFs(name string) (err error) {
+	volumes, err := decodeVolumeMounts()
+	if err != nil {
+		return
+	}
+
 	devices := []string{
 		"/dev/null",
 		"/dev/zero",
@@ -263,7 +306,31 @@ func prepareFs(name string) (err error) {
 		}
 	}
 
+	for _, volume := range volumes {
+		err = os.MkdirAll("."+volume.BoxPath, 0777)
+		if err != nil && !os.IsExist(err) {
+			return fmt.Errorf("preparing volume %s: %w", volume.BoxPath, err)
+		}
+		err = unix.Mount(volume.HostPath, "."+volume.BoxPath, "", unix.MS_BIND|unix.MS_REC, "")
+		if err != nil {
+			return fmt.Errorf("mounting %s: %w", volume.BoxPath, err)
+		}
+	}
+
 	return enterFs()
+}
+
+func decodeVolumeMounts() (volumes []VolumeConfig, err error) {
+	var b []byte
+	_, err = fmt.Sscanf(os.Getenv("FOXBOX_MOUNTS"), "%x", &b)
+	if err != nil {
+		return nil, fmt.Errorf("reading FOXBOX_MOUNTS: %w", err)
+	}
+	err = gob.NewDecoder(bytes.NewReader(b)).Decode(&volumes)
+	if err != nil {
+		return nil, fmt.Errorf("decoding volume config: %w", err)
+	}
+	return
 }
 
 func enterFs() (err error) {

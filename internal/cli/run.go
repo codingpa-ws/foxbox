@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/codingpa-ws/foxbox/client"
@@ -39,6 +40,11 @@ func init() {
 				Name:  "max-pids",
 				Usage: "limits the number of processes",
 			},
+			&cli.StringSliceFlag{
+				Name:    "volume",
+				Aliases: []string{"v"},
+				Usage:   "mounts local volumes in the format host:box",
+			},
 		},
 	})
 }
@@ -57,10 +63,22 @@ func run(ctx *cli.Context) (err error) {
 		}
 	}
 
-	image := args.First()
+	var volumes []client.VolumeConfig
+	if v := ctx.StringSlice("volume"); len(v) > 0 {
+		for _, v := range v {
+			parts := strings.Split(v, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid volume config (%v): must be formatted host:box", v)
+			}
+			volumes = append(volumes, client.VolumeConfig{
+				HostPath: parts[0],
+				BoxPath:  parts[1],
+			})
+		}
+	}
 
 	id, err := client.Create(&client.CreateOptions{
-		Image: image,
+		Image: args.First(),
 	})
 
 	if err != nil {
@@ -82,6 +100,7 @@ func run(ctx *cli.Context) (err error) {
 		MaxMemoryBytes:   uint(v.Bytes()),
 		MaxCPUs:          float32(ctx.Float64("cpu")),
 		MaxProcesses:     ctx.Uint("max-pids"),
+		Volumes:          volumes,
 	})
 
 	var exitError *exec.ExitError
