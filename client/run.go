@@ -127,7 +127,7 @@ func run(name string, entry *store.StoreEntry, opt *RunOptions) error {
 	if err != nil {
 		return fmt.Errorf("setting up cgroup: %w", err)
 	}
-	volumes, err := encodeVolumes(&opt.Volumes)
+	volumes, err := encodeVolumes(opt.Volumes)
 	if err != nil {
 		return fmt.Errorf("encoding volume data (%v): %w", opt.Volumes, err)
 	}
@@ -220,12 +220,12 @@ func setupCgroup(cgroup *cgroup2.CGroup, opt *RunOptions) (err error) {
 	return
 }
 
-func encodeVolumes(volumes *[]VolumeConfig) (string, error) {
+func encodeVolumes(volumes []VolumeConfig) (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getting work dir: %w", err)
 	}
-	for key, volume := range *volumes {
+	for key, volume := range volumes {
 		if !filepath.IsAbs(volume.HostPath) {
 			volume.HostPath = filepath.Join(wd, volume.HostPath)
 		}
@@ -233,7 +233,7 @@ func encodeVolumes(volumes *[]VolumeConfig) (string, error) {
 		if !filepath.IsAbs(volume.BoxPath) {
 			volume.BoxPath = "/" + volume.BoxPath
 		}
-		(*volumes)[key] = volume
+		volumes[key] = volume
 	}
 
 	mountBuf := new(bytes.Buffer)
