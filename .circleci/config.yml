@@ -11,7 +11,7 @@ jobs:
   test-go:
     machine:
       image: ubuntu-2204:current
-    resource_class: large
+    resource_class: medium
     # Add steps to the job
     # See: https://circleci.com/docs/configuration-reference/#steps
     steps:
