@@ -2,6 +2,9 @@
 # See: https://circleci.com/docs/configuration-reference
 version: 2.1
 
+orbs:
+  go: circleci/go@1.10.0
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
@@ -13,15 +16,16 @@ jobs:
     # See: https://circleci.com/docs/configuration-reference/#steps
     steps:
       - checkout
-      - run: wget https://go.dev/dl/go1.21.4.linux-amd64.tar.gz
-      - run: sudo tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz
-      - run: export PATH=$PATH:/usr/local/go/bin
+      - go/install:
+          version: 1.21.4
+      - go/load-cache
       - run: mkdir ~/tmp/
       - run: go install gotest.tools/gotestsum@latest
       - run:
           name: Install libseccomp and slirp4netns
           command: sudo apt-get update && sudo apt-get install libseccomp-dev slirp4netns -y
-      - run: go mod download
+      - go/mod-download
+      - go/save-cache
       - run:
           name: Run tests
           command: TMPDIR=~/tmp/ CI_NO_CGROUP=1 gotestsum -f testdox ./...
