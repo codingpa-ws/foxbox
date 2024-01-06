@@ -19,5 +19,5 @@ require (
 	github.com/klauspost/pgzip v1.2.6
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.7
-	golang.org/x/sys v0.10.0
+	golang.org/x/sys v0.16.0
 )
