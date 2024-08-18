@@ -47,6 +47,24 @@ hostname of the box.
 
 [alpine]: https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.4-x86_64.tar.gz
 
+## Next steps
+
+foxbox should be more usable out of the box (heh!).
+
+Running `foxbox run --rm alpine` should get the `alpine` image for you
+and spin up a box. Likewise, being able to build your own images would
+add more uses to foxbox.
+
+Right now, foxbox is a standalone CLI but this makes it more complicated
+for concurrent use. I see two ways forward: keep it a standalone CLI, so
+it’s easier to use but hard to integrate with, or separate the CLI from
+the engine, so it runs as daemon similar to how Docker or Podman work.
+
+A standalone CLI would be more directly educational but having it
+separated would potentially allow scripting with it and using it
+programmatically. The latter would also prevent resource conflicts but
+I’m not sure how necessary that is.
+
 ## Features
 
 While interop is really cool, I’m not planning to make foxbox compatible
