@@ -247,7 +247,7 @@ func encodeVolumes(volumes []VolumeConfig) (string, error) {
 
 func child() (err error) {
 	name := os.Getenv("FOXBOX_EXEC")
-	err = prepareFs(name)
+	err = prepareFs()
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func child() (err error) {
 	return nil
 }
 
-func prepareFs(name string) (err error) {
+func prepareFs() (err error) {
 	volumes, err := decodeVolumeMounts()
 	if err != nil {
 		return
