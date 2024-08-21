@@ -338,6 +338,7 @@ func enterFs() (err error) {
 		syscall.Chroot("."),
 		os.Chdir("/"),
 		syscall.Mount("proc", "proc", "proc", 0, ""),
+		syscall.Mount("tmpfs", "tmp", "tmpfs", 0, ""),
 		// TODO: figure out if sysfs can be mounted securely?
 		// syscall.Mount("sysfs", "sys", "sysfs", 0, ""),
 	)
