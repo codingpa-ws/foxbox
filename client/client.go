@@ -30,7 +30,7 @@ func FromUser() (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(home, ".local", "share", "containers", "foxbox")
+	path := filepath.Join(home, ".local", "share", "containers", "foxbox", "v1")
 
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
