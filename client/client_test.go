@@ -25,9 +25,9 @@ func TestIntegration(t *testing.T) {
 	store, deleteStore := downloadImage(t)
 	defer deleteStore()
 
-	name, err := client.Create(&client.CreateOptions{
+	foxbox := client.FromStore(store)
+	name, err := foxbox.Create(&client.CreateOptions{
 		Image: AlpineImageName,
-		Store: store,
 	})
 	requires.NoError(err)
 	requires.NotEmpty(name)
@@ -81,7 +81,7 @@ func TestIntegration(t *testing.T) {
 
 	for _, command := range commands {
 		t.Run("command "+strings.Join(command.command, " "), func(t *testing.T) {
-			stdout, stderr, err := run(t, name, store, command.command...)
+			stdout, stderr, err := run(foxbox, name, command.command...)
 
 			var errString string
 			if err != nil {
@@ -97,9 +97,7 @@ func TestIntegration(t *testing.T) {
 	requires.NoError(err)
 	requires.Truef(info.IsDir(), "%s (box filesystem path) must be a directory", entry.FileSystem())
 
-	err = client.Delete(name, &client.DeleteOptions{
-		Store: store,
-	})
+	err = foxbox.Delete(name, nil)
 	requires.NoError(err)
 
 	_, err = os.Stat(entry.FileSystem())
@@ -116,18 +114,17 @@ func TestRun(t *testing.T) {
 		store, deleteStore := downloadImage(t)
 		defer deleteStore()
 
-		name, err := client.Create(&client.CreateOptions{
+		foxbox := client.FromStore(store)
+		name, err := foxbox.Create(&client.CreateOptions{
 			Image: AlpineImageName,
-			Store: store,
 		})
 		require.NoError(err)
 
 		firstRunErr := make(chan error)
 		go func() {
 			fmt.Println("start")
-			err := client.Run(name, &client.RunOptions{
+			err := foxbox.Run(name, &client.RunOptions{
 				Command: []string{"sleep", "0.1"},
-				Store:   store,
 			})
 			fmt.Println("end")
 			firstRunErr <- err
@@ -135,9 +132,8 @@ func TestRun(t *testing.T) {
 		// yeah, currently vulnerable to race condition
 		time.Sleep(time.Millisecond * 10)
 
-		err = client.Run(name, &client.RunOptions{
+		err = foxbox.Run(name, &client.RunOptions{
 			Command: []string{"ls"},
-			Store:   store,
 		})
 		require.Error(err, "client must prevent running a container twice in parallel")
 		require.NoError(<-firstRunErr)
@@ -145,17 +141,15 @@ func TestRun(t *testing.T) {
 }
 
 func run(
-	t *testing.T,
+	foxbox client.Client,
 	name string,
-	store *store.Store,
 	command ...string,
 ) (stdout, stderr string, err error) {
 	stdoutBuilder := new(strings.Builder)
 	stderrBuilder := new(strings.Builder)
-	err = client.Run(name, &client.RunOptions{
+	err = foxbox.Run(name, &client.RunOptions{
 		Stdout:           stdoutBuilder,
 		Stderr:           stderrBuilder,
-		Store:            store,
 		Command:          command,
 		EnableNetworking: true,
 		Volumes: []client.VolumeConfig{{

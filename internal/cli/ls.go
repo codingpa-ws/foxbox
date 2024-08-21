@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/codingpa-ws/foxbox/client"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,7 +15,7 @@ func init() {
 }
 
 func ls(ctx *cli.Context) (err error) {
-	ids, err := client.List(nil)
+	ids, err := foxbox.List(nil)
 	if err != nil {
 		return
 	}

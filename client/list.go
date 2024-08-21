@@ -2,25 +2,13 @@ package client
 
 import (
 	"os"
-
-	"github.com/codingpa-ws/foxbox/internal/store"
 )
 
 type ListOptions struct {
-	Store *store.Store
 }
 
-func List(opt *ListOptions) (ids []string, err error) {
-	opt = newOr(opt)
-
-	if opt.Store == nil {
-		opt.Store, err = store.New(RuntimeDir)
-		if err != nil {
-			return
-		}
-	}
-
-	path := opt.Store.EntryBase()
+func (client *client) List(opt *ListOptions) (ids []string, err error) {
+	path := client.store.EntryBase()
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
