@@ -12,11 +12,10 @@ import (
 
 type CreateOptions struct {
 	Image string
-	Store *store.Store
 }
 
-func (self *CreateOptions) GetImage() (f io.ReadCloser, gzipped bool, err error) {
-	path := self.Store.GetImagePath(self.Image, false)
+func (self *CreateOptions) GetImage(store *store.Store) (f io.ReadCloser, gzipped bool, err error) {
+	path := store.GetImagePath(self.Image, false)
 
 	f, err = os.Open(path)
 	if err != nil {
@@ -27,23 +26,16 @@ func (self *CreateOptions) GetImage() (f io.ReadCloser, gzipped bool, err error)
 	return
 }
 
-func Create(opt *CreateOptions) (name string, err error) {
+func (client *client) Create(opt *CreateOptions) (name string, err error) {
 	opt = newOr(opt)
 	name = NewName()
 
-	if opt.Store == nil {
-		opt.Store, err = store.New("runtime")
-		if err != nil {
-			return
-		}
-	}
-
-	entry, err := opt.Store.NewEntry(name)
+	entry, err := client.store.NewEntry(name)
 	if err != nil {
 		return
 	}
 
-	image, gzipped, err := opt.GetImage()
+	image, gzipped, err := opt.GetImage(client.store)
 	if err != nil {
 		entry.Delete()
 		return

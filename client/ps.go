@@ -3,13 +3,10 @@ package client
 import (
 	"os"
 	"slices"
-
-	"github.com/codingpa-ws/foxbox/internal/store"
 )
 
 type PsOptions struct {
 	States []State
-	Store  *store.Store
 }
 
 type ProcessInfo struct {
@@ -19,17 +16,10 @@ type ProcessInfo struct {
 	ExitCode int
 }
 
-func Ps(opt *PsOptions) (infos []ProcessInfo, err error) {
+func (client *client) Ps(opt *PsOptions) (infos []ProcessInfo, err error) {
 	opt = newOr(opt)
 
-	if opt.Store == nil {
-		opt.Store, err = store.New("runtime")
-		if err != nil {
-			return
-		}
-	}
-
-	entries, err := os.ReadDir(opt.Store.EntryBase())
+	entries, err := os.ReadDir(client.store.EntryBase())
 	if err != nil {
 		return
 	}
@@ -38,7 +28,7 @@ func Ps(opt *PsOptions) (infos []ProcessInfo, err error) {
 			continue
 		}
 
-		entry, err := opt.Store.GetEntry(dir.Name())
+		entry, err := client.store.GetEntry(dir.Name())
 		if err != nil {
 			return nil, err
 		}

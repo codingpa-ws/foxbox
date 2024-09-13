@@ -27,7 +27,6 @@ type VolumeConfig struct {
 
 type RunOptions struct {
 	Command []string
-	Store   *store.Store
 
 	Stdin  io.Reader
 	Stdout io.Writer
@@ -73,17 +72,10 @@ func init() {
 	}
 }
 
-func Run(name string, opt *RunOptions) (err error) {
+func (client *client) Run(name string, opt *RunOptions) (err error) {
 	opt = newOr(opt)
 
-	if opt.Store == nil {
-		opt.Store, err = store.New("runtime")
-		if err != nil {
-			return
-		}
-	}
-
-	entry, err := opt.Store.GetEntry(name)
+	entry, err := client.store.GetEntry(name)
 	if err != nil {
 		return
 	}

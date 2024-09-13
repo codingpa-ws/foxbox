@@ -77,7 +77,7 @@ func run(ctx *cli.Context) (err error) {
 		}
 	}
 
-	id, err := client.Create(&client.CreateOptions{
+	id, err := foxbox.Create(&client.CreateOptions{
 		Image: args.First(),
 	})
 
@@ -87,14 +87,14 @@ func run(ctx *cli.Context) (err error) {
 
 	if ctx.Bool("rm") {
 		defer func() {
-			err := client.Delete(id, nil)
+			err := foxbox.Delete(id, nil)
 			if err != nil {
 				log.Printf("failed to delete foxbox %s: %s\n", id, err)
 			}
 		}()
 	}
 
-	err = client.Run(id, &client.RunOptions{
+	err = foxbox.Run(id, &client.RunOptions{
 		Command:          args.Slice()[1:],
 		EnableNetworking: true,
 		MaxMemoryBytes:   uint(v.Bytes()),

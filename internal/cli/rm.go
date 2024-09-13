@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/codingpa-ws/foxbox/client"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,7 +17,7 @@ func init() {
 
 func rm(ctx *cli.Context) (err error) {
 	for _, id := range ctx.Args().Slice() {
-		err := client.Delete(id, nil)
+		err := foxbox.Delete(id, nil)
 		if err != nil {
 			return fmt.Errorf("removing %s: %w", id, err)
 		}
