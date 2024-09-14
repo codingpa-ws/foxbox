@@ -17,7 +17,8 @@ func GetSysProcAttr(fd int, useCgroupFD bool) (*syscall.SysProcAttr, error) {
 		UidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0,
 			HostID:      int(uid),
-			Size:        1}},
+			Size:        1,
+		}},
 		GidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0,
 			HostID:      int(gid),
