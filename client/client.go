@@ -26,6 +26,14 @@ func FromStore(store *store.Store) Client {
 }
 
 func FromUser() (Client, error) {
+	store, err := GetOrCreateUserStore()
+	if err != nil {
+		return nil, err
+	}
+	return FromStore(store), nil
+}
+
+func GetOrCreateUserStore() (*store.Store, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -36,12 +44,7 @@ func FromUser() (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	store, err := store.New(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return &client{store}, nil
+	return store.New(path)
 }
 
 type State string
