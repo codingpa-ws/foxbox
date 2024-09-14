@@ -22,8 +22,8 @@ func TestIntegration(t *testing.T) {
 		t.Skip("integration test is slow")
 	}
 
-	store, deleteStore := downloadImage(t)
-	defer deleteStore()
+	store := newStore(t)
+	downloadImage(t, store)
 
 	foxbox := client.FromStore(store)
 	name, err := foxbox.Create(&client.CreateOptions{
@@ -111,8 +111,8 @@ func TestRun(t *testing.T) {
 	t.Run("in parallel must fail", func(t *testing.T) {
 		require := require.New(t)
 
-		store, deleteStore := downloadImage(t)
-		defer deleteStore()
+		store := newStore(t)
+		downloadImage(t, store)
 
 		foxbox := client.FromStore(store)
 		name, err := foxbox.Create(&client.CreateOptions{
@@ -164,13 +164,20 @@ func run(
 	return stdoutBuilder.String(), stderrBuilder.String(), err
 }
 
-func downloadImage(t *testing.T) (*store.Store, func()) {
+func newStore(t *testing.T) *store.Store {
 	require := require.New(t)
 	base, err := os.MkdirTemp("", "")
 	require.NoError(err)
 	store, err := store.New(base)
 	require.NoError(err)
+	t.Cleanup(func() {
+		os.RemoveAll(base)
+	})
+	return store
+}
 
+func downloadImage(t *testing.T, store *store.Store) {
+	require := require.New(t)
 	alpineImage, err := testutil.DownloadAlpineImage()
 	require.NoError(err)
 	defer alpineImage.Close()
@@ -181,8 +188,4 @@ func downloadImage(t *testing.T) (*store.Store, func()) {
 
 	_, err = io.Copy(file, alpineImage)
 	require.NoError(err)
-
-	return store, func() {
-		require.NoError(os.RemoveAll(base))
-	}
 }

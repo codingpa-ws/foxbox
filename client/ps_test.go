@@ -10,8 +10,8 @@ import (
 
 func TestPs(t *testing.T) {
 	require := require.New(t)
-	store, deleteStore := downloadImage(t)
-	defer deleteStore()
+	store := newStore(t)
+	downloadImage(t, store)
 
 	foxbox := client.FromStore(store)
 	name, err := foxbox.Create(&client.CreateOptions{
