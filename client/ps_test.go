@@ -30,7 +30,7 @@ func TestPs(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 20)
 
-	infos, err := client.FromStore(store).Ps(nil)
+	infos, err := foxbox.Ps(nil)
 	require.NoError(err)
 	require.Equal(1, len(infos))
 	info := infos[0]
