@@ -62,6 +62,10 @@ func TestIntegration(t *testing.T) {
 			stdout:  name + "\n",
 		},
 		{
+			command: []string{"cat", "/etc/hostname"},
+			stdout:  name + "\n",
+		},
+		{
 			command: []string{"env"},
 			stdout:  "PATH=/bin:/sbin:/usr/bin:/usr/sbin\nLANG=C.UTF-8\nCHARSET=UTF-8\n",
 		},

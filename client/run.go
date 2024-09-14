@@ -247,6 +247,10 @@ func child() (err error) {
 	if err != nil {
 		return fmt.Errorf("setting hostname to %s: %w", name, err)
 	}
+	_, err = os.ReadFile("/etc/hostname")
+	if !os.IsNotExist(err) {
+		_ = os.WriteFile("/etc/hostname", []byte(name+"\n"), 0644)
+	}
 	err = linkStandardStreams()
 	if err != nil {
 		return
