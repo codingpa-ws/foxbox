@@ -15,6 +15,7 @@ type Client interface {
 	List(opt *ListOptions) (ids []string, err error)
 	Ps(opt *PsOptions) (infos []ProcessInfo, err error)
 	Run(name string, opt *RunOptions) (err error)
+	ListImages() ([]Image, error)
 }
 
 type client struct {
