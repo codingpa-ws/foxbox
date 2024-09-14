@@ -9,8 +9,8 @@ type Image struct {
 	Name string
 }
 
-func (self *client) ListImages() (images []Image, err error) {
-	dir := self.store.ImageBase()
+func (client *client) ListImages() (images []Image, err error) {
+	dir := client.store.ImageBase()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
