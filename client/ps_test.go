@@ -28,7 +28,7 @@ func TestPs(t *testing.T) {
 		close(runError)
 	}()
 
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 20)
 
 	infos, err := client.FromStore(store).Ps(nil)
 	require.NoError(err)
