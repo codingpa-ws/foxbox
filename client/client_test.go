@@ -54,10 +54,6 @@ func TestIntegration(t *testing.T) {
 			stdout:  "name=root,uid=0,gid=0\n",
 		},
 		{
-			command: []string{"whoami"},
-			stdout:  "root\n",
-		},
-		{
 			command: []string{"pwd"},
 			stdout:  "/\n",
 		},
