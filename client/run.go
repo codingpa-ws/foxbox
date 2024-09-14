@@ -297,14 +297,25 @@ func decodeVolumeMounts() (volumes []VolumeConfig, err error) {
 }
 
 func enterFs() (err error) {
-	return errors.Join(
-		syscall.Chroot("."),
-		os.Chdir("/"),
-		syscall.Mount("proc", "proc", "proc", 0, ""),
-		syscall.Mount("tmpfs", "tmp", "tmpfs", 0, ""),
-		// TODO: figure out if sysfs can be mounted securely?
-		// syscall.Mount("sysfs", "sys", "sysfs", 0, ""),
-	)
+	err = syscall.Chroot(".")
+	if err != nil {
+		return
+	}
+	err = os.Chdir("/")
+	if err != nil {
+		return
+	}
+	err = syscall.Mount("proc", "proc", "proc", 0, "")
+	if err != nil {
+		return
+	}
+	err = syscall.Mount("tmpfs", "tmp", "tmpfs", 0, "")
+	if err != nil {
+		return
+	}
+	// TODO: figure out if sysfs can be mounted securely?
+	// syscall.Mount("sysfs", "sys", "sysfs", 0, ""),
+	return
 }
 
 func linkStandardStreams() (err error) {
