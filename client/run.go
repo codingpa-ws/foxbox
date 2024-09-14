@@ -122,12 +122,17 @@ func run(name string, entry *store.StoreEntry, opt *RunOptions) error {
 		return fmt.Errorf("encoding volume data (%v): %w", opt.Volumes, err)
 	}
 
+	noTmpfs := "0"
+	if opt.MaxMemoryBytes > 0 {
+		noTmpfs = "1"
+	}
+
 	cmd := exec.Command(executable, opt.Command...)
 	cmd.Stdin = opt.getStdin()
 	cmd.Stdout = opt.getStdout()
 	cmd.Stderr = opt.getStderr()
 	cmd.Dir = entry.FileSystem()
-	cmd.Env = []string{"FOXBOX_EXEC=" + name, "FOXBOX_MOUNTS=" + volumes}
+	cmd.Env = []string{"FOXBOX_EXEC=" + name, "FOXBOX_MOUNTS=" + volumes, "FOXBOX_NO_TMPFS=" + noTmpfs}
 	cmd.SysProcAttr = sysProcAttr
 
 	err = cmd.Start()
@@ -309,9 +314,11 @@ func enterFs() (err error) {
 	if err != nil {
 		return
 	}
-	err = syscall.Mount("tmpfs", "tmp", "tmpfs", 0, "")
-	if err != nil {
-		return
+	if os.Getenv("FOXBOX_NO_TMPFS") != "1" {
+		err = syscall.Mount("tmpfs", "tmp", "tmpfs", 0, "")
+		if err != nil {
+			return
+		}
 	}
 	// TODO: figure out if sysfs can be mounted securely?
 	// syscall.Mount("sysfs", "sys", "sysfs", 0, ""),
