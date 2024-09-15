@@ -33,6 +33,7 @@ var subjects = []string{
 	"proto",
 	"bunny",
 	"yeen",
+	"shep",
 }
 
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
