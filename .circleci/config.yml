@@ -23,7 +23,7 @@ jobs:
       - run: go install gotest.tools/gotestsum@latest
       - run:
           name: Install libseccomp and slirp4netns
-          command: sudo apt-get update && sudo apt-get install libseccomp-dev slirp4netns -y
+          command: DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get install libseccomp-dev slirp4netns -y
       - go/mod-download
       - go/save-cache:
           path: /home/circleci/.go_workspace/pkg
