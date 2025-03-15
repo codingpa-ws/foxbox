@@ -58,6 +58,9 @@ func (self RunOptions) getStderr() io.Writer {
 	}
 	return self.Stderr
 }
+func (self RunOptions) NeedsCGroup() bool {
+	return self.MaxCPUs > 0 || self.MaxMemoryBytes > 0 || self.MaxProcesses > 0
+}
 
 func init() {
 	if _, ok := os.LookupEnv("FOXBOX_EXEC"); ok {
@@ -104,19 +107,26 @@ func run(name string, entry *store.StoreEntry, opt *RunOptions) error {
 		err = errors.Join(err, cgroup.Delete())
 	}()
 
-	cgroupDir, err := os.Open(cgroup.Path())
-	if err != nil {
-		return fmt.Errorf("opening cgroup dir: %w", err)
+	var useCGroup = opt.NeedsCGroup() && os.Getenv("CI_NO_CGROUP") == ""
+	var cgroupFd int
+
+	if useCGroup {
+		cgroupDir, err := os.Open(cgroup.Path())
+		if err != nil {
+			return fmt.Errorf("opening cgroup dir: %w", err)
+		}
+		defer cgroupDir.Close()
+		err = setupCgroup(cgroup, opt)
+		if err != nil {
+			return fmt.Errorf("setting up cgroup: %w", err)
+		}
+		cgroupFd = int(cgroupDir.Fd())
 	}
-	defer cgroupDir.Close()
-	err = setupCgroup(cgroup, opt)
-	if err != nil {
-		return fmt.Errorf("setting up cgroup: %w", err)
-	}
-	sysProcAttr, err := security.GetSysProcAttr(int(cgroupDir.Fd()), os.Getenv("CI_NO_CGROUP") == "")
+	sysProcAttr, err := security.GetSysProcAttr(cgroupFd, useCGroup)
 	if err != nil {
 		return fmt.Errorf("getting proc attributes: %w", err)
 	}
+
 	volumes, err := encodeVolumes(opt.Volumes)
 	if err != nil {
 		return fmt.Errorf("encoding volume data (%v): %w", opt.Volumes, err)

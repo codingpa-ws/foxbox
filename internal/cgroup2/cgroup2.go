@@ -1,6 +1,7 @@
 package cgroup2
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,14 +59,30 @@ func (self CGroup) AddPID(pid int) error {
 	return f.Close()
 }
 
+const basePath = "/sys/fs/cgroup/user.slice/"
+
+var ErrUnavailable = errors.New("cgroup2 not available (check /sys/fs/cgroup/user.slice)")
+
 func Open(name string) (*CGroup, error) {
 	uid := os.Getuid()
-	const basePath = "/sys/fs/cgroup/user.slice/"
+
+	info, err := os.Stat(basePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrUnavailable
+		}
+		return nil, fmt.Errorf("stat cgroup: %w", err)
+	}
+
+	if !info.IsDir() {
+		return nil, ErrUnavailable
+	}
+
 	path := fmt.Sprintf("%suser-%d.slice/user@%d.service/app.slice/%s", basePath, uid, uid, name)
 
 	cgroup := FromPath(path)
 
-	err := os.Mkdir(path, 0777)
+	err = os.Mkdir(path, 0777)
 	if err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("creating cgroup: %w", err)
 	}
