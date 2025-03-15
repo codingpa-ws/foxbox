@@ -10,7 +10,7 @@ orbs:
 jobs:
   test-amd64:
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2404:2024.08.1
     resource_class: medium
     # Add steps to the job
     # See: https://circleci.com/docs/configuration-reference/#steps
